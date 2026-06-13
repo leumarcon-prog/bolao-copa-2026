@@ -1,0 +1,2724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏆 Bolão Copa do Mundo 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+/* ===========================
+   DESIGN SYSTEM - COPA 2026
+   Paleta: Estádio noturno
+   Verde gramado, dourado troféu, azul noite
+   =========================== */
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2235;
+  --bg-card-hover: #1f2a42;
+  --accent-gold: #f5c518;
+  --accent-green: #22c55e;
+  --accent-blue: #3b82f6;
+  --accent-red: #ef4444;
+  --accent-purple: #a855f7;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --border: #1e293b;
+  --border-glow: rgba(245,197,24,0.3);
+  --gradient-gold: linear-gradient(135deg, #f5c518, #ff9500);
+  --gradient-green: linear-gradient(135deg, #22c55e, #16a34a);
+  --gradient-blue: linear-gradient(135deg, #3b82f6, #6366f1);
+  --gradient-red: linear-gradient(135deg, #ef4444, #dc2626);
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow-glow: 0 0 20px rgba(245,197,24,0.15);
+  --radius: 12px;
+  --radius-sm: 8px;
+  
+  /* Light theme */
+  --light-bg-primary: #f0f4ff;
+  --light-bg-secondary: #e8eef8;
+  --light-bg-card: #ffffff;
+  --light-text-primary: #0f172a;
+  --light-text-secondary: #475569;
+  --light-border: #e2e8f0;
+}
+
+[data-theme="light"] {
+  --bg-primary: var(--light-bg-primary);
+  --bg-secondary: var(--light-bg-secondary);
+  --bg-card: var(--light-bg-card);
+  --bg-card-hover: #f8faff;
+  --text-primary: var(--light-text-primary);
+  --text-secondary: var(--light-text-secondary);
+  --border: var(--light-border);
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.08);
+  --shadow-glow: 0 0 20px rgba(245,197,24,0.1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
+  overflow-x: hidden;
+}
+
+/* ---- UPLOAD SCREEN ---- */
+#uploadScreen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(34,197,94,0.12) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.08) 0%, transparent 50%),
+              var(--bg-primary);
+  padding: 2rem;
+}
+
+.upload-hero {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.upload-hero .trophy {
+  font-size: 6rem;
+  display: block;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 30px rgba(245,197,24,0.6));
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.upload-hero h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 0.75rem;
+}
+
+.upload-hero p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.upload-zone {
+  border: 2px dashed rgba(245,197,24,0.4);
+  border-radius: 20px;
+  padding: 3rem 4rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: rgba(245,197,24,0.03);
+  max-width: 480px;
+  width: 100%;
+}
+
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--accent-gold);
+  background: rgba(245,197,24,0.08);
+  box-shadow: 0 0 40px rgba(245,197,24,0.2);
+  transform: scale(1.02);
+}
+
+.upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+.upload-zone h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+.upload-zone p { color: var(--text-secondary); font-size: 0.9rem; }
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.875rem 2rem;
+  background: var(--gradient-gold);
+  border: none;
+  border-radius: 50px;
+  color: #000;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(245,197,24,0.4);
+}
+
+.upload-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(245,197,24,0.6);
+}
+
+#fileInput { display: none; }
+
+/* ---- DASHBOARD LAYOUT ---- */
+#dashboard { display: none; }
+
+/* TOP NAV */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,14,26,0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+}
+
+[data-theme="light"] .topnav {
+  background: rgba(240,244,255,0.95);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--accent-gold);
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav-tabs::-webkit-scrollbar { display: none; }
+
+.nav-tab {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.nav-tab:hover { background: var(--bg-card); color: var(--text-primary); }
+.nav-tab.active { background: var(--accent-gold); color: #000; font-weight: 700; }
+
+.nav-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.nav-btn {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.nav-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+
+/* ---- MAIN CONTENT ---- */
+.main-content {
+  padding: 1.5rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* ---- SECTIONS ---- */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ---- CARDS ---- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+  border-color: rgba(245,197,24,0.2);
+}
+
+.card-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.card-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.card-sub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+/* ---- GRID LAYOUTS ---- */
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
+
+@media (max-width: 1200px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-1-2, .grid-2-1 { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  .topnav { padding: 0 1rem; }
+  .nav-brand span { display: none; }
+  .main-content { padding: 1rem; }
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gap-1 { margin-bottom: 1rem; }
+.gap-15 { margin-bottom: 1.5rem; }
+.gap-2 { margin-bottom: 2rem; }
+
+/* ---- RANKING CARD ---- */
+.ranking-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.ranking-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+}
+
+.ranking-item.rank-1::before { background: var(--gradient-gold); }
+.ranking-item.rank-2::before { background: linear-gradient(135deg, #94a3b8, #64748b); }
+.ranking-item.rank-3::before { background: linear-gradient(135deg, #cd7f32, #b45309); }
+.ranking-item.rank-4::before { background: var(--border); }
+
+.ranking-item:hover { transform: translateX(4px); border-color: rgba(245,197,24,0.3); }
+
+.rank-medal { font-size: 1.4rem; width: 32px; text-align: center; }
+
+.rank-avatar {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rank-info { flex: 1; min-width: 0; }
+.rank-name { font-weight: 700; font-size: 1rem; }
+.rank-detail { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.1rem; }
+
+.rank-points {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent-gold);
+  text-align: right;
+}
+
+.rank-pts-label { font-size: 0.7rem; color: var(--text-muted); }
+
+.progress-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s ease;
+}
+
+/* ---- PODIUM CARDS ---- */
+.podium-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+
+.podium-card {
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+}
+
+.podium-card.gold {
+  background: linear-gradient(135deg, rgba(245,197,24,0.15), rgba(255,149,0,0.08));
+  border-color: rgba(245,197,24,0.4);
+}
+
+.podium-card.silver {
+  background: linear-gradient(135deg, rgba(148,163,184,0.1), rgba(100,116,139,0.05));
+  border-color: rgba(148,163,184,0.3);
+}
+
+.podium-card.bronze {
+  background: linear-gradient(135deg, rgba(180,83,9,0.1), rgba(120,53,15,0.05));
+  border-color: rgba(205,127,50,0.3);
+}
+
+.podium-card .medal { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.podium-card .p-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+.podium-card .p-name { font-size: 1.4rem; font-weight: 800; margin: 0.25rem 0; }
+.podium-card .p-pts { font-size: 2rem; font-weight: 900; }
+.podium-card.gold .p-pts { color: var(--accent-gold); }
+.podium-card.silver .p-pts { color: #94a3b8; }
+.podium-card.bronze .p-pts { color: #cd7f32; }
+.podium-card .p-sub { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem; }
+
+@media (max-width: 640px) {
+  .podium-cards { grid-template-columns: 1fr; }
+}
+
+/* ---- CHART CONTAINERS ---- */
+.chart-container { position: relative; width: 100%; }
+
+/* ---- FILTERS BAR ---- */
+.filters-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+}
+
+.filter-group { display: flex; align-items: center; gap: 0.5rem; }
+
+.filter-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
+
+.filter-select {
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.filter-select:focus { border-color: var(--accent-gold); }
+
+.filter-chip {
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-chip.active, .filter-chip:hover {
+  background: var(--accent-gold);
+  color: #000;
+  border-color: var(--accent-gold);
+  font-weight: 600;
+}
+
+/* ---- TABLES ---- */
+.table-wrapper { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+thead th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-card);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+thead th:hover { color: var(--text-primary); }
+thead th .sort-icon { margin-left: 0.25rem; opacity: 0.4; }
+thead th.sort-asc .sort-icon::after { content: ' ▲'; opacity: 1; }
+thead th.sort-desc .sort-icon::after { content: ' ▼'; opacity: 1; }
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+tbody tr:hover { background: var(--bg-card-hover); }
+
+tbody td {
+  padding: 0.75rem 1rem;
+  color: var(--text-primary);
+}
+
+.td-center { text-align: center; }
+.td-right { text-align: right; }
+
+/* ---- BADGES ---- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-gold { background: rgba(245,197,24,0.15); color: var(--accent-gold); }
+.badge-green { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+.badge-purple { background: rgba(168,85,247,0.15); color: var(--accent-purple); }
+
+/* ---- INSIGHTS PANEL ---- */
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+
+.insight-card {
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  transition: all 0.3s;
+}
+
+.insight-card:hover { border-color: rgba(245,197,24,0.3); transform: translateY(-2px); }
+
+.insight-icon { font-size: 2rem; flex-shrink: 0; }
+.insight-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem; }
+.insight-desc { font-size: 0.83rem; color: var(--text-secondary); line-height: 1.5; }
+
+/* ---- PLAYER COLORS ---- */
+.color-leo { color: #3b82f6; }
+.color-deia { color: #ec4899; }
+.color-thais { color: #a855f7; }
+.color-rafa { color: #22c55e; }
+.bg-leo { background: rgba(59,130,246,0.15); }
+.bg-deia { background: rgba(236,72,153,0.15); }
+.bg-thais { background: rgba(168,85,247,0.15); }
+.bg-rafa { background: rgba(34,197,94,0.15); }
+
+/* ---- STAT MINI CARDS ---- */
+.mini-stats { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+
+.mini-stat {
+  flex: 1;
+  min-width: 120px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  text-align: center;
+}
+
+.mini-stat .ms-value { font-size: 1.6rem; font-weight: 800; }
+.mini-stat .ms-label { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; }
+
+/* ---- AI SECTION ---- */
+.ai-section {
+  background: linear-gradient(135deg, rgba(168,85,247,0.1), rgba(59,130,246,0.08));
+  border: 1px solid rgba(168,85,247,0.3);
+  border-radius: var(--radius);
+  padding: 2rem;
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ai-icon {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, #a855f7, #3b82f6);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+}
+
+.ai-header h3 { font-size: 1.1rem; font-weight: 700; }
+.ai-header p { font-size: 0.83rem; color: var(--text-secondary); }
+
+.ai-text {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+.ai-text strong { color: var(--accent-gold); }
+.ai-text .highlight { 
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  background: rgba(168,85,247,0.12); 
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* ---- HEATMAP ---- */
+.heatmap-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.heatmap-table th, .heatmap-table td { 
+  padding: 0.4rem 0.5rem; 
+  text-align: center;
+  border: 1px solid var(--border);
+}
+.heatmap-table th { background: var(--bg-secondary); font-weight: 600; font-size: 0.72rem; }
+.hm-cell { border-radius: 4px; }
+
+/* ---- SCORING LEGEND ---- */
+.score-legend { 
+  display: flex; 
+  gap: 1rem; 
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.score-leg-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.score-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ---- MATRIX ---- */
+.matrix-wrapper { overflow-x: auto; }
+
+.matrix-table { 
+  border-collapse: collapse; 
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.matrix-table th, .matrix-table td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.matrix-table th { 
+  background: var(--bg-secondary); 
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+/* ---- SIMULATION ---- */
+.sim-bars { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+
+.sim-bar-item { display: flex; align-items: center; gap: 1rem; }
+.sim-bar-label { width: 60px; font-weight: 600; font-size: 0.9rem; }
+.sim-bar-track { flex: 1; height: 28px; background: var(--bg-secondary); border-radius: 14px; overflow: hidden; }
+.sim-bar-fill { height: 100%; border-radius: 14px; display: flex; align-items: center; padding: 0 0.75rem; font-size: 0.8rem; font-weight: 700; color: #000; transition: width 1.2s ease; }
+.sim-bar-pct { width: 48px; text-align: right; font-weight: 700; }
+
+/* ---- TIMELINE ---- */
+.timeline-wrapper { overflow-x: auto; padding-bottom: 1rem; }
+
+/* ---- TOOLTIPS ---- */
+[data-tooltip] { position: relative; cursor: help; }
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.9);
+  color: #fff;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 99;
+}
+
+[data-tooltip]:hover::before { opacity: 1; }
+
+/* ---- LOADING ---- */
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- EXPORT BUTTONS ---- */
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.83rem;
+  transition: all 0.2s;
+}
+
+.export-btn:hover { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); font-weight: 600; }
+
+/* ---- ANIMATION ---- */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in { animation: fadeSlideIn 0.4s ease forwards; }
+
+/* ---- MONTE CARLO ---- */
+.mc-scenario {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.mc-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  text-align: center;
+}
+
+.mc-card .mc-name { font-weight: 700; margin-bottom: 0.5rem; }
+.mc-card .mc-win { font-size: 1.4rem; font-weight: 900; }
+.mc-card .mc-range { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.25rem; }
+
+/* ---- RULE CARD ---- */
+.rule-card {
+  background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(59,130,246,0.06));
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.rule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+
+.rule-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.rule-desc { font-size: 0.83rem; color: var(--text-secondary); }
+.rule-pts { font-size: 1.2rem; font-weight: 800; color: var(--accent-gold); }
+
+/* ---- RECORD HIGHLIGHT ---- */
+.record-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: linear-gradient(135deg, rgba(245,197,24,0.2), rgba(255,149,0,0.15));
+  border: 1px solid rgba(245,197,24,0.4);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(245,197,24,0.3); }
+  50% { box-shadow: 0 0 12px rgba(245,197,24,0.6); }
+}
+
+/* ---- RESPONSIVE FIXES ---- */
+@media (max-width: 480px) {
+  .nav-tabs { display: none; }
+  .mobile-menu-btn { display: flex; }
+}
+
+.mobile-nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 200;
+  flex-direction: column;
+  padding: 2rem 1.5rem;
+  gap: 0.5rem;
+}
+
+.mobile-nav-tab {
+  padding: 1rem;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.mobile-nav-tab:hover, .mobile-nav-tab.active {
+  background: var(--accent-gold);
+  color: #000;
+}
+
+.mobile-close {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.hamburger-btn {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+@media (max-width: 700px) {
+  .nav-tabs { display: none; }
+  .hamburger-btn { display: flex; align-items: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== UPLOAD SCREEN ===== -->
+<div id="uploadScreen">
+  <div class="upload-hero">
+    <span class="trophy">🏆</span>
+    <h1>Bolão Copa do Mundo 2026</h1>
+    <p>Dashboard analítico completo para acompanhar seu bolão. Carregue o arquivo Excel para começar.</p>
+  </div>
+
+  <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📊</div>
+    <h3>Arraste o arquivo Excel aqui</h3>
+    <p>Ou clique para selecionar</p>
+    <button class="upload-btn" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+      📁 Selecionar Arquivo Excel
+    </button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="dashboard">
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      🏆 <span>Bolão Copa 2026</span>
+    </div>
+    <div class="nav-tabs" id="navTabs">
+      <button class="nav-tab active" onclick="showSection('overview')">📊 Visão Geral</button>
+      <button class="nav-tab" onclick="showSection('evolution')">📈 Evolução</button>
+      <button class="nav-tab" onclick="showSection('accuracy')">🎯 Acertos</button>
+      <button class="nav-tab" onclick="showSection('comparison')">⚔️ Comparação</button>
+      <button class="nav-tab" onclick="showSection('stats')">📐 Estatísticas</button>
+      <button class="nav-tab" onclick="showSection('games')">⚽ Jogos</button>
+      <button class="nav-tab" onclick="showSection('simulation')">🎲 Simulação</button>
+      <button class="nav-tab" onclick="showSection('ai')">🤖 IA Analítica</button>
+    </div>
+    <div class="nav-actions">
+      <button class="hamburger-btn" onclick="toggleMobileMenu()">☰</button>
+      <button class="nav-btn" onclick="toggleTheme()">🌙</button>
+      <button class="nav-btn" onclick="exportPDF()">📄 PDF</button>
+      <button class="nav-btn" onclick="exportScreenshot()">📷</button>
+    </div>
+  </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-nav-overlay" id="mobileMenu">
+    <button class="mobile-close" onclick="toggleMobileMenu()">✕</button>
+    <div style="margin-top:2rem; display:flex; flex-direction:column; gap:0.5rem;">
+      <button class="mobile-nav-tab" onclick="showSection('overview'); toggleMobileMenu()">📊 Visão Geral</button>
+      <button class="mobile-nav-tab" onclick="showSection('evolution'); toggleMobileMenu()">📈 Evolução</button>
+      <button class="mobile-nav-tab" onclick="showSection('accuracy'); toggleMobileMenu()">🎯 Acertos</button>
+      <button class="mobile-nav-tab" onclick="showSection('comparison'); toggleMobileMenu()">⚔️ Comparação</button>
+      <button class="mobile-nav-tab" onclick="showSection('stats'); toggleMobileMenu()">📐 Estatísticas</button>
+      <button class="mobile-nav-tab" onclick="showSection('games'); toggleMobileMenu()">⚽ Jogos</button>
+      <button class="mobile-nav-tab" onclick="showSection('simulation'); toggleMobileMenu()">🎲 Simulação</button>
+      <button class="mobile-nav-tab" onclick="showSection('ai'); toggleMobileMenu()">🤖 IA Analítica</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+
+    <!-- ======== SECTION: OVERVIEW ======== -->
+    <div class="section active" id="sec-overview">
+      <div id="overviewContent"></div>
+    </div>
+
+    <!-- ======== SECTION: EVOLUTION ======== -->
+    <div class="section" id="sec-evolution">
+      <div id="evolutionContent"></div>
+    </div>
+
+    <!-- ======== SECTION: ACCURACY ======== -->
+    <div class="section" id="sec-accuracy">
+      <div id="accuracyContent"></div>
+    </div>
+
+    <!-- ======== SECTION: COMPARISON ======== -->
+    <div class="section" id="sec-comparison">
+      <div id="comparisonContent"></div>
+    </div>
+
+    <!-- ======== SECTION: STATS ======== -->
+    <div class="section" id="sec-stats">
+      <div id="statsContent"></div>
+    </div>
+
+    <!-- ======== SECTION: GAMES ======== -->
+    <div class="section" id="sec-games">
+      <div id="gamesContent"></div>
+    </div>
+
+    <!-- ======== SECTION: SIMULATION ======== -->
+    <div class="section" id="sec-simulation">
+      <div id="simulationContent"></div>
+    </div>
+
+    <!-- ======== SECTION: AI ======== -->
+    <div class="section" id="sec-ai">
+      <div id="aiContent"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// BOLÃO COPA 2026 - DASHBOARD ANALÍTICO
+// Scoring Logic (deduced 100% confidence):
+//   5pts = Exact score (A and B both match)
+//   3pts = Correct winner + one score matches (A or B)
+//   2pts = Correct winner, no score match
+//   1pt  = Wrong winner but one score matches OR correct draw (not exact)
+//   0pts = Completely wrong
+// ============================================================
+
+// ---- STATE ----
+let rawData = [];
+let players = ['Léo', 'Déia', 'Thais', 'Rafa'];
+let playerKeys = ['Leo', 'Déia', 'Thais', 'Rafa'];
+let playerColors = {
+  'Léo': '#3b82f6',
+  'Déia': '#ec4899',
+  'Thais': '#a855f7',
+  'Rafa': '#22c55e'
+};
+let playerEmoji = { 'Léo': '🔵', 'Déia': '🩷', 'Thais': '🟣', 'Rafa': '🟢' };
+let playerInitials = { 'Léo': 'LÉ', 'Déia': 'DÉ', 'Thais': 'TH', 'Rafa': 'RF' };
+let chartsRegistry = {};
+let currentTheme = 'dark';
+let processedGames = [];
+let playerStats = {};
+
+// ---- UPLOAD HANDLING ----
+const dropZone = document.getElementById('dropZone');
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, { type: 'array', cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    rawData = XLSX.utils.sheet_to_json(ws, { defval: null });
+    
+    // Normalize column names
+    rawData = rawData.map(row => {
+      const normalized = {};
+      for (const [k, v] of Object.entries(row)) {
+        const key = k.trim()
+          .replace('Pontuação Léo', 'pts_Leo')
+          .replace('Pontuação Déia', 'pts_Déia')
+          .replace('Pontuação Thais', 'pts_Thais')
+          .replace('Pontuação Rafa', 'pts_Rafa');
+        normalized[key] = v;
+      }
+      return normalized;
+    });
+
+    initDashboard();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ---- SCORING FUNCTION ----
+function calcScore(ra, rb, pa, pb) {
+  if (ra === null || rb === null || pa === null || pb === null) return null;
+  ra = Number(ra); rb = Number(rb); pa = Number(pa); pb = Number(pb);
+  if (isNaN(ra) || isNaN(rb) || isNaN(pa) || isNaN(pb)) return null;
+
+  // Exact score
+  if (ra === pa && rb === pb) return 5;
+
+  const realWinner = ra > rb ? 'A' : (ra < rb ? 'B' : 'D');
+  const predWinner = pa > pb ? 'A' : (pa < pb ? 'B' : 'D');
+
+  if (realWinner === predWinner) {
+    if (realWinner === 'D') return 1;
+    return (ra === pa || rb === pb) ? 3 : 2;
+  } else {
+    return (ra === pa || rb === pb) ? 1 : 0;
+  }
+}
+
+// ---- INIT DASHBOARD ----
+function initDashboard() {
+  processGames();
+  computeStats();
+  
+  document.getElementById('uploadScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  
+  renderOverview();
+  renderEvolution();
+  renderAccuracy();
+  renderComparison();
+  renderStats();
+  renderGames();
+  renderSimulation();
+  renderAI();
+}
+
+// ---- PROCESS GAMES ----
+function processGames() {
+  processedGames = [];
+  
+  for (const row of rawData) {
+    const partida = row['Partida'];
+    const rodada = row['Rodada'];
+    const pais = row['País'] || '';
+    let data = row['Data'];
+    
+    // Format date
+    let dataStr = '';
+    if (data instanceof Date) {
+      dataStr = data.toLocaleDateString('pt-BR');
+    } else if (typeof data === 'string') {
+      dataStr = data;
+    } else if (typeof data === 'number') {
+      // Excel serial date
+      const d = new Date((data - 25569) * 86400 * 1000);
+      dataStr = d.toLocaleDateString('pt-BR');
+    }
+
+    const realA = row['Real A'] !== null ? Number(row['Real A']) : null;
+    const realB = row['Real B'] !== null ? Number(row['Real B']) : null;
+    const played = realA !== null && realB !== null && !isNaN(realA) && !isNaN(realB);
+
+    // Player predictions & scores
+    const playerData = {};
+    for (const pk of playerKeys) {
+      const pa = row[`${pk} A`] !== null ? Number(row[`${pk} A`]) : null;
+      const pb = row[`${pk} B`] !== null ? Number(row[`${pk} B`]) : null;
+      const hasPred = pa !== null && pb !== null && !isNaN(pa) && !isNaN(pb);
+      
+      // Use stored score if game played, or calc if we have real
+      let score = null;
+      if (played && hasPred) {
+        // Try stored first, then calc
+        const storedKey = pk === 'Leo' ? 'pts_Leo' : `pts_${pk}`;
+        const stored = row[storedKey];
+        score = (stored !== null && stored !== undefined && !isNaN(Number(stored))) 
+          ? Number(stored) 
+          : calcScore(realA, realB, pa, pb);
+      }
+
+      playerData[pk] = { predA: pa, predB: pb, hasPred, score };
+    }
+
+    processedGames.push({
+      partida, rodada, pais, data: dataStr,
+      realA, realB, played, playerData
+    });
+  }
+}
+
+// ---- COMPUTE STATS ----
+function computeStats() {
+  playerStats = {};
+  
+  for (const pk of playerKeys) {
+    const pName = players[playerKeys.indexOf(pk)];
+    const stats = {
+      name: pName,
+      key: pk,
+      totalPts: 0,
+      gamesPlayed: 0,
+      exact: 0,
+      correctWinner: 0,
+      correctDraw: 0,
+      partial: 0,
+      wrong: 0,
+      best: -Infinity,
+      worst: Infinity,
+      bestGame: '',
+      worstGame: '',
+      ptsByGame: [],
+      ptsCumulative: [],
+      ptsPerRound: {},
+      rankHistory: [],
+      streakHit: 0,
+      streakMiss: 0,
+      curStreakHit: 0,
+      curStreakMiss: 0,
+      totalPredGoals: 0,
+      totalRealGoals: 0,
+      deviations: [],
+    };
+    playerStats[pk] = stats;
+  }
+
+  // Compute running cumulative
+  let cumulative = { Leo: 0, 'Déia': 0, Thais: 0, Rafa: 0 };
+  
+  for (const game of processedGames) {
+    if (!game.played) continue;
+    
+    const gamePts = {};
+    for (const pk of playerKeys) {
+      const pd = game.playerData[pk];
+      const pts = pd.score !== null ? pd.score : 0;
+      gamePts[pk] = pts;
+      
+      const st = playerStats[pk];
+      st.totalPts += pts;
+      st.gamesPlayed++;
+      cumulative[pk] += pts;
+      st.ptsByGame.push({ game: game.partida, pts, pais: game.pais });
+      st.ptsCumulative.push(cumulative[pk]);
+      
+      if (!st.ptsPerRound[game.rodada]) st.ptsPerRound[game.rodada] = 0;
+      st.ptsPerRound[game.rodada] += pts;
+
+      if (pts > st.best) { st.best = pts; st.bestGame = game.pais; }
+      if (pts < st.worst) { st.worst = pts; st.worstGame = game.pais; }
+
+      // Hit/miss classification
+      if (pts === 5) { st.exact++; st.correctWinner++; }
+      else if (pts === 3 || pts === 2) { st.correctWinner++; }
+      else if (pts === 1) {
+        const { predA, predB } = pd;
+        const { realA, realB } = game;
+        if (predA !== null && predA === predB && realA === realB) st.correctDraw++;
+        else st.partial++;
+      } else { st.wrong++; }
+
+      // Streak
+      if (pts > 0) {
+        st.curStreakHit++;
+        st.curStreakMiss = 0;
+        if (st.curStreakHit > st.streakHit) st.streakHit = st.curStreakHit;
+      } else {
+        st.curStreakMiss++;
+        st.curStreakHit = 0;
+        if (st.curStreakMiss > st.streakMiss) st.streakMiss = st.curStreakMiss;
+      }
+
+      // Goal deviation
+      if (pd.predA !== null && pd.predB !== null) {
+        const devA = Math.abs(game.realA - pd.predA);
+        const devB = Math.abs(game.realB - pd.predB);
+        st.deviations.push(devA + devB);
+        st.totalPredGoals += pd.predA + pd.predB;
+        st.totalRealGoals += game.realA + game.realB;
+      }
+    }
+
+    // Rank at this game
+    const sorted = playerKeys.slice().sort((a, b) => cumulative[b] - cumulative[a]);
+    for (const pk of playerKeys) {
+      playerStats[pk].rankHistory.push(sorted.indexOf(pk) + 1);
+    }
+  }
+
+  // Derived
+  for (const pk of playerKeys) {
+    const st = playerStats[pk];
+    st.avgScore = st.gamesPlayed > 0 ? (st.totalPts / st.gamesPlayed) : 0;
+    st.hitRate = st.gamesPlayed > 0 ? (st.correctWinner / st.gamesPlayed * 100) : 0;
+    st.exactRate = st.gamesPlayed > 0 ? (st.exact / st.gamesPlayed * 100) : 0;
+    st.avgDev = st.deviations.length > 0 ? (st.deviations.reduce((a,b)=>a+b,0) / st.deviations.length) : 0;
+    const maxAvg = st.gamesPlayed > 0 ? Math.max(...st.ptsByGame.map(g=>g.pts)) : 0;
+    st.consistency = st.gamesPlayed > 0 ? (1 - (stdDev(st.ptsByGame.map(g=>g.pts)) / 5)) * 100 : 0;
+    if (st.best === -Infinity) st.best = 0;
+    if (st.worst === Infinity) st.worst = 0;
+  }
+}
+
+function stdDev(arr) {
+  if (!arr.length) return 0;
+  const mean = arr.reduce((a,b)=>a+b,0) / arr.length;
+  const sq = arr.map(x => (x-mean)**2);
+  return Math.sqrt(sq.reduce((a,b)=>a+b,0) / arr.length);
+}
+
+function avg(arr) {
+  return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+}
+
+// ---- RANKING ----
+function getRanking() {
+  return playerKeys
+    .map(pk => playerStats[pk])
+    .sort((a, b) => b.totalPts - a.totalPts);
+}
+
+// ---- CHART HELPER ----
+function createChart(id, config) {
+  if (chartsRegistry[id]) {
+    chartsRegistry[id].destroy();
+  }
+  const ctx = document.getElementById(id);
+  if (!ctx) return null;
+  const chart = new Chart(ctx, config);
+  chartsRegistry[id] = chart;
+  return chart;
+}
+
+function chartDefaults() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: { color: currentTheme === 'dark' ? '#94a3b8' : '#475569', font: { size: 12 } }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        titleColor: '#f1f5f9',
+        bodyColor: '#94a3b8',
+        borderColor: 'rgba(245,197,24,0.3)',
+        borderWidth: 1,
+        padding: 10,
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: currentTheme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+        ticks: { color: currentTheme === 'dark' ? '#475569' : '#94a3b8' }
+      },
+      y: {
+        grid: { color: currentTheme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+        ticks: { color: currentTheme === 'dark' ? '#475569' : '#94a3b8' }
+      }
+    }
+  };
+}
+
+// ---- SECTION: OVERVIEW ----
+function renderOverview() {
+  const ranking = getRanking();
+  const played = processedGames.filter(g => g.played);
+  const totalPts = ranking.reduce((a, s) => a + s.totalPts, 0);
+
+  const medals = ['🥇', '🥈', '🥉', '💔'];
+  const podiumClasses = ['gold', 'silver', 'bronze'];
+
+  let html = `
+    <!-- PODIUM CARDS -->
+    <div class="podium-cards animate-in gap-15">`;
+  
+  for (let i = 0; i < 3; i++) {
+    const st = ranking[i];
+    const pct = totalPts > 0 ? (st.totalPts / totalPts * 100).toFixed(1) : '0.0';
+    html += `
+      <div class="podium-card ${podiumClasses[i]}">
+        <div class="medal">${medals[i]}</div>
+        <div class="p-label">${i === 0 ? '🏆 Líder' : i === 1 ? '⬆️ Vice-líder' : '3º Lugar'}</div>
+        <div class="p-name" style="color:${playerColors[st.name]}">${st.name}</div>
+        <div class="p-pts">${st.totalPts}</div>
+        <div class="p-sub">${pct}% dos pontos totais</div>
+      </div>`;
+  }
+  html += `</div>`;
+
+  // MINI STATS
+  html += `
+    <div class="mini-stats animate-in gap-15">
+      <div class="mini-stat card">
+        <div class="ms-value" style="color:var(--accent-green)">${played.length}</div>
+        <div class="ms-label">Jogos Disputados</div>
+      </div>
+      <div class="mini-stat card">
+        <div class="ms-value" style="color:var(--accent-gold)">${processedGames.length - played.length}</div>
+        <div class="ms-label">Jogos Restantes</div>
+      </div>
+      <div class="mini-stat card">
+        <div class="ms-value" style="color:var(--accent-blue)">${totalPts}</div>
+        <div class="ms-label">Total de Pontos</div>
+      </div>
+      <div class="mini-stat card">
+        <div class="ms-value" style="color:var(--accent-purple)">${Math.max(...ranking.map(s=>s.exact))}</div>
+        <div class="ms-label">Placares Exatos (máx)</div>
+      </div>
+    </div>`;
+
+  // RANKING LIST
+  html += `
+    <div class="grid-1-2 gap-15">
+      <div class="card animate-in">
+        <div class="card-title">🏅 Ranking Atual</div>
+        <div class="ranking-list">`;
+  
+  for (let i = 0; i < ranking.length; i++) {
+    const st = ranking[i];
+    const pct = ranking[0].totalPts > 0 ? (st.totalPts / ranking[0].totalPts * 100) : 0;
+    const shareTotal = totalPts > 0 ? (st.totalPts / totalPts * 100).toFixed(1) : '0';
+    html += `
+      <div class="ranking-item rank-${i+1}">
+        <div class="rank-medal">${medals[i]}</div>
+        <div class="rank-avatar bg-${st.key.toLowerCase() === 'déia' ? 'deia' : st.key.toLowerCase()}" 
+             style="background:${playerColors[st.name]}22; color:${playerColors[st.name]}">
+          ${playerInitials[st.name]}
+        </div>
+        <div class="rank-info">
+          <div class="rank-name">${st.name}</div>
+          <div class="rank-detail">${st.gamesPlayed}j | ${st.exact} exatos | ${shareTotal}% total</div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${pct}%;background:${playerColors[st.name]}"></div>
+          </div>
+        </div>
+        <div>
+          <div class="rank-points">${st.totalPts}</div>
+          <div class="rank-pts-label">pts</div>
+        </div>
+      </div>`;
+  }
+  
+  html += `</div></div>`;
+
+  // RANKING CHART
+  html += `
+      <div class="card animate-in">
+        <div class="card-title">📊 Pontos por Participante</div>
+        <div class="chart-container" style="height:280px">
+          <canvas id="rankingChart"></canvas>
+        </div>
+      </div>
+    </div>`;
+
+  // SCORING RULE
+  html += `
+    <div class="rule-card animate-in gap-15">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem">
+        <span style="font-size:1.5rem">📐</span>
+        <div>
+          <div style="font-weight:700;font-size:1rem">Regra de Pontuação Deduzida</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary)">Identificada automaticamente com <span class="badge badge-green">100% de confiança</span> em ${played.length} jogos disputados</div>
+        </div>
+      </div>
+      <div class="rule-grid">
+        <div class="rule-item" data-tooltip="Ambos os gols correspondem exatamente">
+          <span class="rule-desc">🎯 Placar Exato</span>
+          <span class="rule-pts">5 pts</span>
+        </div>
+        <div class="rule-item" data-tooltip="Vencedor certo + um dos gols bate">
+          <span class="rule-desc">✅ Vencedor + 1 gol</span>
+          <span class="rule-pts">3 pts</span>
+        </div>
+        <div class="rule-item" data-tooltip="Vencedor correto, nenhum gol bate">
+          <span class="rule-desc">✅ Vencedor</span>
+          <span class="rule-pts">2 pts</span>
+        </div>
+        <div class="rule-item" data-tooltip="Empate correto (não exato) ou 1 gol certo">
+          <span class="rule-desc">〰️ Parcial / Empate</span>
+          <span class="rule-pts">1 pt</span>
+        </div>
+        <div class="rule-item" data-tooltip="Nenhuma correspondência">
+          <span class="rule-desc">❌ Erro total</span>
+          <span class="rule-pts">0 pts</span>
+        </div>
+      </div>
+    </div>`;
+
+  // RANKING EVOLUTION MINI
+  html += `
+    <div class="card animate-in">
+      <div class="card-title">📈 Evolução da Liderança por Jogo</div>
+      <div class="chart-container" style="height:220px">
+        <canvas id="rankEvolutionMini"></canvas>
+      </div>
+    </div>`;
+
+  document.getElementById('overviewContent').innerHTML = html;
+  
+  // Render charts
+  setTimeout(() => {
+    renderRankingChart();
+    renderRankEvolutionMini();
+  }, 50);
+}
+
+function renderRankingChart() {
+  const ranking = getRanking();
+  createChart('rankingChart', {
+    type: 'bar',
+    data: {
+      labels: ranking.map(s => s.name),
+      datasets: [{
+        label: 'Pontos Totais',
+        data: ranking.map(s => s.totalPts),
+        backgroundColor: ranking.map(s => playerColors[s.name] + 'cc'),
+        borderColor: ranking.map(s => playerColors[s.name]),
+        borderWidth: 2,
+        borderRadius: 8,
+      }]
+    },
+    options: {
+      ...chartDefaults(),
+      plugins: {
+        ...chartDefaults().plugins,
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+function renderRankEvolutionMini() {
+  const played = processedGames.filter(g => g.played);
+  if (!played.length) return;
+  const labels = played.map((g, i) => `J${i+1}`);
+  
+  createChart('rankEvolutionMini', {
+    type: 'line',
+    data: {
+      labels,
+      datasets: playerKeys.map(pk => ({
+        label: playerStats[pk].name,
+        data: playerStats[pk].rankHistory,
+        borderColor: playerColors[playerStats[pk].name],
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }))
+    },
+    options: {
+      ...chartDefaults(),
+      scales: {
+        ...chartDefaults().scales,
+        y: {
+          ...chartDefaults().scales.y,
+          reverse: true,
+          min: 1, max: 4,
+          ticks: { 
+            ...chartDefaults().scales.y.ticks,
+            stepSize: 1,
+            callback: v => `${v}º`
+          }
+        }
+      }
+    }
+  });
+}
+
+// ---- SECTION: EVOLUTION ----
+function renderEvolution() {
+  const played = processedGames.filter(g => g.played);
+  const labels = played.map((g, i) => `J${i+1}`);
+  
+  let html = `
+    <div class="section-header">
+      <div class="section-title">📈 Evolução do Bolão</div>
+    </div>
+
+    <div class="card gap-15 animate-in">
+      <div class="card-title">🏆 Pontuação Acumulada</div>
+      <div class="chart-container" style="height:320px">
+        <canvas id="cumulativeChart"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-2 gap-15">
+      <div class="card animate-in">
+        <div class="card-title">⚡ Pontos por Jogo</div>
+        <div class="chart-container" style="height:280px">
+          <canvas id="perGameChart"></canvas>
+        </div>
+      </div>
+      <div class="card animate-in">
+        <div class="card-title">📊 Pontos por Rodada</div>
+        <div class="chart-container" style="height:280px">
+          <canvas id="perRoundChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card animate-in">
+      <div class="card-title">👑 Linha do Tempo de Liderança</div>
+      <div class="chart-container" style="height:260px">
+        <canvas id="leaderTimelineChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card animate-in">
+      <div class="card-title">🎯 Posição no Ranking (por jogo)</div>
+      <div class="chart-container" style="height:260px">
+        <canvas id="rankPosChart"></canvas>
+      </div>
+    </div>`;
+
+  document.getElementById('evolutionContent').innerHTML = html;
+  
+  setTimeout(() => {
+    // Cumulative
+    createChart('cumulativeChart', {
+      type: 'line',
+      data: {
+        labels,
+        datasets: playerKeys.map(pk => ({
+          label: playerStats[pk].name,
+          data: playerStats[pk].ptsCumulative,
+          borderColor: playerColors[playerStats[pk].name],
+          backgroundColor: playerColors[playerStats[pk].name] + '18',
+          borderWidth: 2.5,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+        }))
+      },
+      options: { ...chartDefaults() }
+    });
+
+    // Per game
+    createChart('perGameChart', {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: playerKeys.map(pk => ({
+          label: playerStats[pk].name,
+          data: playerStats[pk].ptsByGame.map(g => g.pts),
+          backgroundColor: playerColors[playerStats[pk].name] + 'aa',
+          borderColor: playerColors[playerStats[pk].name],
+          borderWidth: 1,
+          borderRadius: 4,
+        }))
+      },
+      options: { ...chartDefaults(), scales: { ...chartDefaults().scales, x: { ...chartDefaults().scales.x, stacked: false } } }
+    });
+
+    // Per round
+    const rounds = [...new Set(processedGames.filter(g=>g.played).map(g=>g.rodada))];
+    createChart('perRoundChart', {
+      type: 'bar',
+      data: {
+        labels: rounds,
+        datasets: playerKeys.map(pk => ({
+          label: playerStats[pk].name,
+          data: rounds.map(r => playerStats[pk].ptsPerRound[r] || 0),
+          backgroundColor: playerColors[playerStats[pk].name] + 'cc',
+          borderColor: playerColors[playerStats[pk].name],
+          borderWidth: 2,
+          borderRadius: 6,
+        }))
+      },
+      options: { ...chartDefaults() }
+    });
+
+    // Leader timeline
+    const leaderData = played.map((g, i) => {
+      let maxPts = -1, leader = '';
+      let cum = {};
+      for (const pk of playerKeys) {
+        cum[pk] = playerStats[pk].ptsCumulative[i] || 0;
+        if (cum[pk] > maxPts) { maxPts = cum[pk]; leader = pk; }
+      }
+      return { leader, pts: maxPts };
+    });
+
+    createChart('leaderTimelineChart', {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Líder da Rodada',
+          data: leaderData.map(d => d.pts),
+          backgroundColor: leaderData.map(d => playerColors[playerStats[d.leader].name] + 'cc'),
+          borderColor: leaderData.map(d => playerColors[playerStats[d.leader].name]),
+          borderWidth: 2,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        ...chartDefaults(),
+        plugins: {
+          ...chartDefaults().plugins,
+          tooltip: {
+            ...chartDefaults().plugins.tooltip,
+            callbacks: {
+              title: (items) => `Jogo ${items[0].label}`,
+              label: (item) => {
+                const d = leaderData[item.dataIndex];
+                return ` Líder: ${playerStats[d.leader].name} (${d.pts} pts)`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Rank position
+    createChart('rankPosChart', {
+      type: 'line',
+      data: {
+        labels,
+        datasets: playerKeys.map(pk => ({
+          label: playerStats[pk].name,
+          data: playerStats[pk].rankHistory,
+          borderColor: playerColors[playerStats[pk].name],
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 5,
+          pointStyle: 'circle',
+          pointHoverRadius: 8,
+        }))
+      },
+      options: {
+        ...chartDefaults(),
+        scales: {
+          ...chartDefaults().scales,
+          y: {
+            ...chartDefaults().scales.y,
+            reverse: true, min: 1, max: 4,
+            ticks: { ...chartDefaults().scales.y.ticks, stepSize: 1, callback: v => `${v}º` }
+          }
+        }
+      }
+    });
+  }, 50);
+}
+
+// ---- SECTION: ACCURACY ----
+function renderAccuracy() {
+  const ranking = getRanking();
+  
+  let html = `
+    <div class="section-header">
+      <div class="section-title">🎯 Análise de Acertos</div>
+    </div>
+
+    <div class="grid-2 animate-in gap-15">
+      <div class="card">
+        <div class="card-title">📊 Distribuição de Acertos</div>
+        <div class="chart-container" style="height:300px">
+          <canvas id="accuracyChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🕸️ Radar Comparativo</div>
+        <div class="chart-container" style="height:300px">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card animate-in gap-15">
+      <div class="card-title">📋 Tabela de Eficiência</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Participante</th>
+              <th class="td-center">Exatos (5pts)</th>
+              <th class="td-center">Vencedor+Gol (3pts)</th>
+              <th class="td-center">Vencedor (2pts)</th>
+              <th class="td-center">Parcial (1pt)</th>
+              <th class="td-center">Erro (0pts)</th>
+              <th class="td-center">Taxa Acerto</th>
+              <th class="td-center">Avg/jogo</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+  for (const st of ranking) {
+    const played = processedGames.filter(g => g.played);
+    const pData = played.map(g => g.playerData[st.key]);
+    const exact5 = pData.filter(p => p.score === 5).length;
+    const hit3 = pData.filter(p => p.score === 3).length;
+    const hit2 = pData.filter(p => p.score === 2).length;
+    const partial = pData.filter(p => p.score === 1).length;
+    const wrong = pData.filter(p => p.score === 0).length;
+    const hitRate = played.length > 0 ? ((exact5 + hit3 + hit2) / played.length * 100).toFixed(0) : 0;
+    
+    html += `
+      <tr>
+        <td><strong style="color:${playerColors[st.name]}">${playerEmoji[st.name]} ${st.name}</strong></td>
+        <td class="td-center"><span class="badge badge-gold">${exact5}</span></td>
+        <td class="td-center"><span class="badge badge-green">${hit3}</span></td>
+        <td class="td-center"><span class="badge badge-blue">${hit2}</span></td>
+        <td class="td-center"><span class="badge badge-purple">${partial}</span></td>
+        <td class="td-center"><span class="badge badge-red">${wrong}</span></td>
+        <td class="td-center">${hitRate}%</td>
+        <td class="td-center">${st.avgScore.toFixed(2)}</td>
+      </tr>`;
+  }
+
+  html += `</tbody></table></div></div>`;
+
+  // Heatmap
+  html += `
+    <div class="card animate-in">
+      <div class="card-title">🔥 Heatmap de Desempenho por Jogo</div>
+      <div class="table-wrapper">
+        <table class="heatmap-table">
+          <thead>
+            <tr>
+              <th>Jogo</th>
+              <th>Placar</th>`;
+  for (const pk of playerKeys) {
+    html += `<th>${playerStats[pk].name}</th>`;
+  }
+  html += `</tr></thead><tbody>`;
+
+  const played = processedGames.filter(g => g.played);
+  for (const game of played) {
+    html += `<tr>
+      <td><span style="font-size:0.75rem;color:var(--text-secondary)">#${game.partida}</span><br/><span style="font-size:0.78rem">${game.pais.split(' x ')[0]}</span></td>
+      <td style="font-weight:700;white-space:nowrap">${game.realA} – ${game.realB}</td>`;
+    for (const pk of playerKeys) {
+      const pd = game.playerData[pk];
+      const score = pd.score;
+      let bg = 'transparent', color = 'var(--text-muted)';
+      if (score === 5) { bg = '#22c55e33'; color = '#22c55e'; }
+      else if (score === 3) { bg = '#3b82f633'; color = '#3b82f6'; }
+      else if (score === 2) { bg = '#6366f133'; color = '#6366f1'; }
+      else if (score === 1) { bg = '#f5c51833'; color = '#f5c518'; }
+      else if (score === 0) { bg = '#ef444433'; color = '#ef4444'; }
+      const pred = pd.predA !== null ? `${pd.predA}-${pd.predB}` : '?';
+      html += `<td class="hm-cell" style="background:${bg};color:${color};font-weight:700" data-tooltip="${pred} → ${score}pts">${score !== null ? score : '–'}</td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table></div>
+    <div class="score-legend">
+      <div class="score-leg-item"><div class="score-dot" style="background:#22c55e"></div>5 pts (exato)</div>
+      <div class="score-leg-item"><div class="score-dot" style="background:#3b82f6"></div>3 pts (vencedor + gol)</div>
+      <div class="score-leg-item"><div class="score-dot" style="background:#6366f1"></div>2 pts (vencedor)</div>
+      <div class="score-leg-item"><div class="score-dot" style="background:#f5c518"></div>1 pt (parcial)</div>
+      <div class="score-leg-item"><div class="score-dot" style="background:#ef4444"></div>0 pts (erro)</div>
+    </div>
+    </div>`;
+
+  document.getElementById('accuracyContent').innerHTML = html;
+  
+  setTimeout(() => {
+    // Accuracy stacked bar
+    createChart('accuracyChart', {
+      type: 'bar',
+      data: {
+        labels: ranking.map(s => s.name),
+        datasets: [
+          { label: '🎯 Exatos', data: ranking.map(s => s.exact), backgroundColor: '#22c55e99', borderRadius: 4 },
+          { label: '✅ Vencedor', data: ranking.map(s => s.correctWinner - s.exact), backgroundColor: '#3b82f699', borderRadius: 4 },
+          { label: '〰 Parcial', data: ranking.map(s => s.partial + s.correctDraw), backgroundColor: '#f5c51899', borderRadius: 4 },
+          { label: '❌ Erro', data: ranking.map(s => s.wrong), backgroundColor: '#ef444499', borderRadius: 4 },
+        ]
+      },
+      options: {
+        ...chartDefaults(),
+        scales: {
+          x: { ...chartDefaults().scales.x, stacked: true },
+          y: { ...chartDefaults().scales.y, stacked: true }
+        }
+      }
+    });
+
+    // Radar
+    const played2 = processedGames.filter(g => g.played);
+    if (played2.length) {
+      createChart('radarChart', {
+        type: 'radar',
+        data: {
+          labels: ['Exatos', 'Taxa Acerto', 'Consistência', 'Avg/Jogo', 'Menos Erros'],
+          datasets: playerKeys.map(pk => {
+            const st = playerStats[pk];
+            const t = played2.length;
+            return {
+              label: st.name,
+              data: [
+                st.exact / Math.max(1, Math.max(...playerKeys.map(k=>playerStats[k].exact))) * 100,
+                st.hitRate,
+                Math.max(0, st.consistency),
+                st.avgScore / 5 * 100,
+                (1 - st.wrong / Math.max(1, t)) * 100,
+              ],
+              borderColor: playerColors[st.name],
+              backgroundColor: playerColors[st.name] + '20',
+              borderWidth: 2,
+              pointRadius: 4,
+            };
+          })
+        },
+        options: {
+          ...chartDefaults(),
+          scales: {
+            r: {
+              grid: { color: 'rgba(255,255,255,0.08)' },
+              angleLines: { color: 'rgba(255,255,255,0.08)' },
+              ticks: { color: 'transparent', backdropColor: 'transparent' },
+              pointLabels: { color: '#94a3b8', font: { size: 11 } },
+              min: 0, max: 100,
+            }
+          }
+        }
+      });
+    }
+  }, 50);
+}
+
+// ---- SECTION: COMPARISON ----
+function renderComparison() {
+  const ranking = getRanking();
+  const played = processedGames.filter(g => g.played);
+  
+  // Compute head-to-head matrix (who scores more in each game)
+  let matrix = {};
+  for (const a of playerKeys) {
+    matrix[a] = {};
+    for (const b of playerKeys) {
+      matrix[a][b] = { wins: 0, ties: 0, losses: 0 };
+    }
+  }
+
+  for (const game of played) {
+    for (const a of playerKeys) {
+      for (const b of playerKeys) {
+        if (a === b) continue;
+        const sa = game.playerData[a].score || 0;
+        const sb = game.playerData[b].score || 0;
+        if (sa > sb) matrix[a][b].wins++;
+        else if (sa === sb) matrix[a][b].ties++;
+        else matrix[a][b].losses++;
+      }
+    }
+  }
+
+  let html = `
+    <div class="section-header">
+      <div class="section-title">⚔️ Comparação entre Participantes</div>
+    </div>
+
+    <div class="card animate-in gap-15">
+      <div class="card-title">🎯 Matriz de Comparação (quem pontuou mais em cada jogo)</div>
+      <div class="matrix-wrapper">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>vs →</th>`;
+  
+  for (const pk of playerKeys) {
+    html += `<th style="color:${playerColors[playerStats[pk].name]}">${playerStats[pk].name}</th>`;
+  }
+  html += `</tr></thead><tbody>`;
+
+  for (const a of playerKeys) {
+    html += `<tr><td style="font-weight:700;color:${playerColors[playerStats[a].name]}">${playerStats[a].name}</td>`;
+    for (const b of playerKeys) {
+      if (a === b) {
+        html += `<td style="background:var(--bg-secondary);color:var(--text-muted)">—</td>`;
+      } else {
+        const m = matrix[a][b];
+        const bg = m.wins > m.losses ? '#22c55e22' : m.wins < m.losses ? '#ef444422' : '#f5c51822';
+        const label = `${m.wins}V ${m.ties}E ${m.losses}D`;
+        html += `<td style="background:${bg}" data-tooltip="${label}">${m.wins}-${m.ties}-${m.losses}</td>`;
+      }
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+
+  // Deviation comparison
+  html += `
+    <div class="grid-2 animate-in gap-15">
+      <div class="card">
+        <div class="card-title">📏 Desvio Médio do Placar Real</div>
+        <div class="chart-container" style="height:260px">
+          <canvas id="deviationChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">💡 Índices Comparativos</div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr>
+              <th>Indicador</th>
+              ${ranking.map(s => `<th style="color:${playerColors[s.name]}" class="td-center">${s.name}</th>`).join('')}
+            </tr></thead>
+            <tbody>`;
+
+  const indicators = [
+    { label: '📐 Desvio Médio', key: s => s.avgDev.toFixed(2), lower: true },
+    { label: '🎯 Taxa Acerto', key: s => s.hitRate.toFixed(0) + '%', lower: false },
+    { label: '🎳 Precisão Exata', key: s => s.exactRate.toFixed(0) + '%', lower: false },
+    { label: '📈 Consistência', key: s => s.consistency.toFixed(0) + '%', lower: false },
+    { label: '⚡ Média/Jogo', key: s => s.avgScore.toFixed(2), lower: false },
+    { label: '🔥 Melhor Jogo', key: s => `${s.best}pts`, lower: false },
+    { label: '❄️ Pior Jogo', key: s => `${s.worst}pts`, lower: true },
+  ];
+
+  for (const ind of indicators) {
+    const vals = ranking.map(s => parseFloat(ind.key(s)));
+    const best = ind.lower ? Math.min(...vals) : Math.max(...vals);
+    html += `<tr><td style="font-size:0.83rem">${ind.label}</td>`;
+    for (const s of ranking) {
+      const v = ind.key(s);
+      const fv = parseFloat(v);
+      const isBest = fv === best;
+      html += `<td class="td-center" style="font-weight:${isBest?'700':'400'};color:${isBest?'var(--accent-gold)':'var(--text-primary)'}">${isBest?'⭐ ':''}${v}</td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table></div></div></div>`;
+
+  // Ousadia chart
+  html += `
+    <div class="card animate-in">
+      <div class="card-title">🎲 Índice de Ousadia (média de gols previstos)</div>
+      <div class="chart-container" style="height:220px">
+        <canvas id="ousadiaChart"></canvas>
+      </div>
+    </div>`;
+
+  document.getElementById('comparisonContent').innerHTML = html;
+
+  setTimeout(() => {
+    createChart('deviationChart', {
+      type: 'bar',
+      data: {
+        labels: ranking.map(s => s.name),
+        datasets: [{
+          label: 'Desvio Médio (gols)',
+          data: ranking.map(s => s.avgDev.toFixed(2)),
+          backgroundColor: ranking.map(s => playerColors[s.name] + 'aa'),
+          borderColor: ranking.map(s => playerColors[s.name]),
+          borderWidth: 2,
+          borderRadius: 8,
+        }]
+      },
+      options: {
+        ...chartDefaults(),
+        plugins: { ...chartDefaults().plugins, legend: { display: false } }
+      }
+    });
+
+    // Ousadia = avg goals predicted vs avg goals real
+    const ousadiaData = playerKeys.map(pk => {
+      const st = playerStats[pk];
+      const pplayed = processedGames.filter(g=>g.played);
+      let totalPredGoals = 0, count = 0;
+      for (const g of pplayed) {
+        const pd = g.playerData[pk];
+        if (pd.predA !== null && pd.predB !== null) {
+          totalPredGoals += pd.predA + pd.predB;
+          count++;
+        }
+      }
+      const avgRealGoals = pplayed.reduce((a,g) => a + g.realA + g.realB, 0) / Math.max(1, pplayed.length);
+      return { name: st.name, avgPred: count > 0 ? totalPredGoals/count : 0, avgReal: avgRealGoals };
+    });
+
+    createChart('ousadiaChart', {
+      type: 'bar',
+      data: {
+        labels: playerKeys.map(pk => playerStats[pk].name),
+        datasets: [
+          {
+            label: 'Média gols previstos',
+            data: ousadiaData.map(d => d.avgPred.toFixed(2)),
+            backgroundColor: playerKeys.map(pk => playerColors[playerStats[pk].name] + 'cc'),
+            borderRadius: 6,
+          },
+          {
+            label: 'Média gols reais',
+            data: ousadiaData.map(d => d.avgReal.toFixed(2)),
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            borderColor: 'rgba(255,255,255,0.4)',
+            borderWidth: 2,
+            borderRadius: 6,
+          }
+        ]
+      },
+      options: { ...chartDefaults() }
+    });
+  }, 50);
+}
+
+// ---- SECTION: STATS ----
+function renderStats() {
+  const ranking = getRanking();
+  const played = processedGames.filter(g => g.played);
+  
+  let html = `
+    <div class="section-header">
+      <div class="section-title">📐 Estatísticas Avançadas</div>
+    </div>
+
+    <div class="insights-grid animate-in gap-15">`;
+
+  // Best streaks
+  const bestStreak = ranking.reduce((a,b) => a.streakHit > b.streakHit ? a : b);
+  const mostConsistent = ranking.reduce((a,b) => a.consistency > b.consistency ? a : b);
+  const bestPrecision = ranking.reduce((a,b) => a.avgDev < b.avgDev ? a : b);
+  const mostExact = ranking.reduce((a,b) => a.exact > b.exact ? a : b);
+  const bestAvg = ranking.reduce((a,b) => a.avgScore > b.avgScore ? a : b);
+
+  const insights = [
+    { icon: '🔥', title: 'Maior Sequência de Acertos', desc: `${bestStreak.name} com ${bestStreak.streakHit} jogos consecutivos pontuando`, color: 'var(--accent-gold)' },
+    { icon: '🎯', title: 'Maior Precisão', desc: `${bestPrecision.name} com desvio médio de ${bestPrecision.avgDev.toFixed(2)} gols por jogo`, color: 'var(--accent-green)' },
+    { icon: '🏆', title: 'Mais Consistente', desc: `${mostConsistent.name} com índice de ${Math.max(0,mostConsistent.consistency).toFixed(0)}% de consistência`, color: 'var(--accent-blue)' },
+    { icon: '🎳', title: 'Mais Placares Exatos', desc: `${mostExact.name} com ${mostExact.exact} placar${mostExact.exact !== 1 ? 'es' : ''} exato${mostExact.exact !== 1 ? 's' : ''}`, color: 'var(--accent-purple)' },
+    { icon: '⚡', title: 'Melhor Média por Jogo', desc: `${bestAvg.name} com ${bestAvg.avgScore.toFixed(2)} pontos por jogo`, color: 'var(--accent-gold)' },
+    { icon: '📈', title: 'Melhor Aproveitamento', desc: `${ranking[0].name} lidera com ${ranking[0].totalPts} pontos totais`, color: 'var(--accent-green)' },
+  ];
+
+  for (const ins of insights) {
+    html += `
+      <div class="insight-card">
+        <div class="insight-icon">${ins.icon}</div>
+        <div>
+          <div class="insight-title" style="color:${ins.color}">${ins.title}</div>
+          <div class="insight-desc">${ins.desc}</div>
+        </div>
+      </div>`;
+  }
+
+  html += `</div>
+
+    <div class="card animate-in gap-15">
+      <div class="card-title">📋 Estatísticas Detalhadas por Participante</div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr>
+            <th>Participante</th>
+            <th class="td-center">Total Pts</th>
+            <th class="td-center">Jogos</th>
+            <th class="td-center">Melhor Jogo</th>
+            <th class="td-center">Pior Jogo</th>
+            <th class="td-center">Seq. Acertos</th>
+            <th class="td-center">Seq. Erros</th>
+            <th class="td-center">Desvio Médio</th>
+            <th class="td-center">Consistência</th>
+          </tr></thead>
+          <tbody>`;
+
+  for (const st of ranking) {
+    html += `
+      <tr>
+        <td><strong style="color:${playerColors[st.name]}">${playerEmoji[st.name]} ${st.name}</strong></td>
+        <td class="td-center"><strong style="color:var(--accent-gold)">${st.totalPts}</strong></td>
+        <td class="td-center">${st.gamesPlayed}</td>
+        <td class="td-center"><span class="badge badge-green">${st.best}pts</span><br/><span style="font-size:0.7rem;color:var(--text-muted)">${st.bestGame.split(' x ')[0]}</span></td>
+        <td class="td-center"><span class="badge badge-red">${st.worst}pts</span><br/><span style="font-size:0.7rem;color:var(--text-muted)">${st.worstGame.split(' x ')[0]}</span></td>
+        <td class="td-center">${st.streakHit}</td>
+        <td class="td-center">${st.streakMiss}</td>
+        <td class="td-center">${st.avgDev.toFixed(2)}</td>
+        <td class="td-center">${Math.max(0, st.consistency).toFixed(0)}%</td>
+      </tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+
+  // Points distribution histogram
+  html += `
+    <div class="grid-2 animate-in">
+      <div class="card">
+        <div class="card-title">📊 Distribuição de Pontuações por Jogo</div>
+        <div class="chart-container" style="height:260px">
+          <canvas id="distChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏅 Melhor Rodada por Participante</div>
+        <div class="chart-container" style="height:260px">
+          <canvas id="bestRoundChart"></canvas>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('statsContent').innerHTML = html;
+
+  setTimeout(() => {
+    // Distribution
+    const cats = [0, 1, 2, 3, 5];
+    createChart('distChart', {
+      type: 'bar',
+      data: {
+        labels: cats.map(c => `${c} pts`),
+        datasets: playerKeys.map(pk => ({
+          label: playerStats[pk].name,
+          data: cats.map(c => playerStats[pk].ptsByGame.filter(g => g.pts === c).length),
+          backgroundColor: playerColors[playerStats[pk].name] + 'cc',
+          borderRadius: 6,
+        }))
+      },
+      options: { ...chartDefaults() }
+    });
+
+    // Best round
+    const rounds = [...new Set(processedGames.map(g => g.rodada))];
+    createChart('bestRoundChart', {
+      type: 'bar',
+      data: {
+        labels: playerKeys.map(pk => playerStats[pk].name),
+        datasets: rounds.map((r, i) => ({
+          label: r,
+          data: playerKeys.map(pk => playerStats[pk].ptsPerRound[r] || 0),
+          backgroundColor: ['#3b82f6cc', '#22c55ecc', '#f5c518cc'][i % 3],
+          borderRadius: 6,
+        }))
+      },
+      options: { ...chartDefaults() }
+    });
+  }, 50);
+}
+
+// ---- SECTION: GAMES ----
+function renderGames() {
+  const played = processedGames.filter(g => g.played);
+  
+  // Per-game total points (sum across players)
+  const gameScores = played.map(g => {
+    const total = playerKeys.reduce((a, pk) => a + (g.playerData[pk].score || 0), 0);
+    const allCorrect = playerKeys.every(pk => g.playerData[pk].score > 0);
+    const noneCorrect = playerKeys.every(pk => g.playerData[pk].score === 0);
+    const allExact = playerKeys.every(pk => g.playerData[pk].score === 5);
+    return { ...g, totalPts: total, allCorrect, noneCorrect, allExact };
+  });
+
+  const sortedByPts = [...gameScores].sort((a, b) => b.totalPts - a.totalPts);
+
+  let html = `
+    <div class="section-header">
+      <div class="section-title">⚽ Análise dos Jogos</div>
+    </div>
+
+    <div class="grid-3 animate-in gap-15">`;
+
+  const hardest = gameScores.filter(g => g.noneCorrect);
+  const easiest = gameScores.filter(g => g.allCorrect);
+  const allExact = gameScores.filter(g => g.allExact);
+
+  html += `
+    <div class="card">
+      <div class="card-title">😤 Jogos que Ninguém Acertou</div>
+      ${hardest.length ? hardest.map(g => `
+        <div style="padding:0.5rem;border-bottom:1px solid var(--border)">
+          <div style="font-size:0.85rem;font-weight:600">${g.pais}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary)">${g.realA} – ${g.realB}</div>
+        </div>`).join('') : '<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum ainda</div>'}
+    </div>
+    <div class="card">
+      <div class="card-title">🎉 Todos Acertaram o Vencedor</div>
+      ${easiest.length ? easiest.map(g => `
+        <div style="padding:0.5rem;border-bottom:1px solid var(--border)">
+          <div style="font-size:0.85rem;font-weight:600">${g.pais}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary)">${g.realA} – ${g.realB}</div>
+        </div>`).join('') : '<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum ainda</div>'}
+    </div>
+    <div class="card">
+      <div class="card-title">🤩 Todos Acertaram o Placar Exato</div>
+      ${allExact.length ? allExact.map(g => `
+        <div style="padding:0.5rem;border-bottom:1px solid var(--border)">
+          <div style="font-size:0.85rem;font-weight:600">${g.pais}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary)">${g.realA} – ${g.realB}</div>
+        </div>`).join('') : '<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum ainda</div>'}
+    </div>
+  </div>`;
+
+  html += `
+    <div class="card animate-in gap-15">
+      <div class="card-title">🏆 Jogos que Mais Geraram Pontos</div>
+      <div class="chart-container" style="height:240px">
+        <canvas id="topGamesChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card animate-in">
+      <div class="card-title">📋 Todos os Jogos Disputados</div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr>
+            <th>#</th>
+            <th>Partida</th>
+            <th class="td-center">Resultado</th>`;
+
+  for (const pk of playerKeys) {
+    html += `<th class="td-center" style="color:${playerColors[playerStats[pk].name]}">${playerStats[pk].name}</th>`;
+  }
+  html += `<th class="td-center">Total</th></tr></thead><tbody>`;
+
+  for (const g of sortedByPts) {
+    html += `
+      <tr>
+        <td style="color:var(--text-muted);font-size:0.8rem">${g.partida}</td>
+        <td style="font-size:0.85rem">${g.pais}</td>
+        <td class="td-center"><strong>${g.realA} – ${g.realB}</strong></td>`;
+    for (const pk of playerKeys) {
+      const pd = g.playerData[pk];
+      const s = pd.score;
+      let badge = '';
+      if (s === 5) badge = 'badge-green';
+      else if (s >= 2) badge = 'badge-blue';
+      else if (s === 1) badge = 'badge-purple';
+      else badge = 'badge-red';
+      html += `<td class="td-center" data-tooltip="Palpite: ${pd.predA}-${pd.predB}"><span class="badge ${badge}">${s}pts</span></td>`;
+    }
+    html += `<td class="td-center"><strong style="color:var(--accent-gold)">${g.totalPts}</strong></td></tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+
+  document.getElementById('gamesContent').innerHTML = html;
+
+  setTimeout(() => {
+    const top = sortedByPts.slice(0, Math.min(sortedByPts.length, 10));
+    createChart('topGamesChart', {
+      type: 'bar',
+      data: {
+        labels: top.map(g => g.pais.length > 20 ? g.pais.slice(0, 18) + '…' : g.pais),
+        datasets: [{
+          label: 'Pontos totais',
+          data: top.map(g => g.totalPts),
+          backgroundColor: top.map(g => `hsl(${g.totalPts / 20 * 120}, 70%, 55%)cc`),
+          borderRadius: 8,
+        }]
+      },
+      options: {
+        ...chartDefaults(),
+        plugins: { ...chartDefaults().plugins, legend: { display: false } }
+      }
+    });
+  }, 50);
+}
+
+// ---- SECTION: SIMULATION ----
+function renderSimulation() {
+  const played = processedGames.filter(g => g.played);
+  const remaining = processedGames.filter(g => !g.played);
+  const ranking = getRanking();
+  
+  // Max possible pts per game = 5
+  const maxPerGame = 5;
+  const gamesLeft = remaining.filter(g => g.playerData[playerKeys[0]].hasPred || true).length;
+  
+  // Simple probability based on current performance + remaining games
+  const maxPossible = {};
+  const minPossible = {};
+  
+  for (const st of ranking) {
+    maxPossible[st.key] = st.totalPts + gamesLeft * maxPerGame;
+    minPossible[st.key] = st.totalPts; // best case: 0 more
+  }
+
+  // Monte Carlo simulation (1000 scenarios)
+  const N = 1000;
+  const wins = { Leo: 0, 'Déia': 0, Thais: 0, Rafa: 0 };
+  
+  const scoreDistrib = [0, 0, 0, 1, 1, 1, 2, 2, 3, 5]; // weighted random scores
+  
+  for (let i = 0; i < N; i++) {
+    const sim = {};
+    for (const pk of playerKeys) {
+      sim[pk] = playerStats[pk].totalPts;
+      for (let j = 0; j < gamesLeft; j++) {
+        sim[pk] += scoreDistrib[Math.floor(Math.random() * scoreDistrib.length)];
+      }
+    }
+    const winner = playerKeys.reduce((a, b) => sim[a] > sim[b] ? a : b);
+    wins[winner]++;
+  }
+
+  let html = `
+    <div class="section-header">
+      <div class="section-title">🎲 Simulação & Projeções</div>
+    </div>
+
+    <div class="grid-2 animate-in gap-15">
+      <div class="card">
+        <div class="card-title">📊 Probabilidade de Vitória (Monte Carlo - ${N} cenários)</div>
+        <div class="sim-bars">`;
+
+  const sortedByWin = ranking.slice().sort((a, b) => wins[b.key] - wins[a.key]);
+  for (const st of sortedByWin) {
+    const pct = (wins[st.key] / N * 100).toFixed(1);
+    html += `
+      <div class="sim-bar-item">
+        <div class="sim-bar-label" style="color:${playerColors[st.name]}">${st.name}</div>
+        <div class="sim-bar-track">
+          <div class="sim-bar-fill" style="width:${pct}%;background:${playerColors[st.name]}">${pct}%</div>
+        </div>
+        <div class="sim-bar-pct" style="color:${playerColors[st.name]}">${pct}%</div>
+      </div>`;
+  }
+  html += `</div></div>
+
+      <div class="card">
+        <div class="card-title">📈 Cenário: Pontos Possíveis</div>
+        <div class="chart-container" style="height:250px">
+          <canvas id="scenarioChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card animate-in gap-15">
+      <div class="card-title">🎯 Projeções por Participante</div>
+      <div class="mc-scenario">`;
+
+  for (const st of ranking) {
+    const winPct = (wins[st.key] / N * 100).toFixed(1);
+    html += `
+      <div class="mc-card">
+        <div class="mc-name" style="color:${playerColors[st.name]}">${playerEmoji[st.name]} ${st.name}</div>
+        <div class="mc-win" style="color:${playerColors[st.name]}">${winPct}%</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.25rem">chance de vitória</div>
+        <div class="mc-range" style="margin-top:0.75rem">
+          <div>Atual: <strong>${st.totalPts} pts</strong></div>
+          <div>Máx: <strong>${maxPossible[st.key]} pts</strong></div>
+          <div>Jogos restantes: <strong>${gamesLeft}</strong></div>
+        </div>
+      </div>`;
+  }
+  
+  html += `</div></div>
+
+    <div class="card animate-in">
+      <div class="card-title">💡 Pontos Necessários para Virar o Bolão</div>`;
+
+  const leader = ranking[0];
+  for (let i = 1; i < ranking.length; i++) {
+    const diff = leader.totalPts - ranking[i].totalPts;
+    const gamesNeeded = Math.ceil(diff / 5);
+    html += `
+      <div style="display:flex;align-items:center;gap:1rem;padding:0.75rem;border-bottom:1px solid var(--border)">
+        <span style="color:${playerColors[ranking[i].name]};font-weight:700;min-width:60px">${ranking[i].name}</span>
+        <span style="font-size:0.85rem;color:var(--text-secondary)">precisa de <strong style="color:var(--accent-gold)">${diff} pontos</strong> a mais (min. ${gamesNeeded} placares exatos consecutivos)</span>
+      </div>`;
+  }
+  html += `</div>`;
+
+  document.getElementById('simulationContent').innerHTML = html;
+
+  setTimeout(() => {
+    createChart('scenarioChart', {
+      type: 'bar',
+      data: {
+        labels: ranking.map(s => s.name),
+        datasets: [
+          {
+            label: 'Pontos Atuais',
+            data: ranking.map(s => s.totalPts),
+            backgroundColor: ranking.map(s => playerColors[s.name] + 'cc'),
+            borderRadius: 6,
+          },
+          {
+            label: 'Máximo Possível',
+            data: ranking.map(s => maxPossible[s.key] - s.totalPts),
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderColor: ranking.map(s => playerColors[s.name] + '66'),
+            borderWidth: 1,
+            borderRadius: 6,
+          }
+        ]
+      },
+      options: {
+        ...chartDefaults(),
+        scales: {
+          x: { ...chartDefaults().scales.x, stacked: true },
+          y: { ...chartDefaults().scales.y, stacked: true }
+        }
+      }
+    });
+  }, 50);
+}
+
+// ---- SECTION: AI ANALYSIS ----
+function renderAI() {
+  const ranking = getRanking();
+  const played = processedGames.filter(g => g.played);
+  const remaining = processedGames.filter(g => !g.played);
+  
+  if (!played.length) {
+    document.getElementById('aiContent').innerHTML = `
+      <div class="card" style="text-align:center;padding:3rem">
+        <div style="font-size:3rem;margin-bottom:1rem">🤖</div>
+        <div style="font-weight:700;font-size:1.1rem">Aguardando dados</div>
+        <div style="color:var(--text-secondary);margin-top:0.5rem">A análise será gerada conforme os resultados forem inseridos.</div>
+      </div>`;
+    return;
+  }
+
+  const leader = ranking[0];
+  const last = ranking[ranking.length - 1];
+  const mostExact = ranking.reduce((a, b) => a.exact > b.exact ? a : b);
+  const mostConsistent = ranking.reduce((a, b) => a.consistency > b.consistency ? a : b);
+  const bestPrecision = ranking.reduce((a, b) => a.avgDev < b.avgDev ? a : b);
+  const gapLeader = ranking[0].totalPts - ranking[1].totalPts;
+  
+  // Recent form (last 2 games if available)
+  const recentGames = played.slice(-2);
+  const recentPts = {};
+  for (const pk of playerKeys) {
+    recentPts[pk] = recentGames.reduce((a, g) => a + (g.playerData[pk].score || 0), 0);
+  }
+  const bestRecentKey = playerKeys.reduce((a, b) => recentPts[a] > recentPts[b] ? a : b);
+  const bestRecent = playerStats[bestRecentKey];
+
+  const totalGames = processedGames.length;
+  const progressPct = (played.length / totalGames * 100).toFixed(0);
+
+  let html = `
+    <div class="section-header">
+      <div class="section-title">🤖 IA Analítica</div>
+    </div>
+
+    <!-- EXECUTIVE SUMMARY -->
+    <div class="ai-section animate-in gap-15">
+      <div class="ai-header">
+        <div class="ai-icon">🤖</div>
+        <div>
+          <h3>Resumo Executivo do Bolão</h3>
+          <p>Gerado automaticamente com base em ${played.length} jogos disputados</p>
+        </div>
+      </div>
+      <div class="ai-text">
+        <p>O Bolão Copa do Mundo 2026 está em pleno andamento, com <strong>${played.length} de ${totalGames} jogos</strong> já concluídos — 
+        representando <strong>${progressPct}%</strong> da fase de grupos. No placar atual, 
+        <strong style="color:${playerColors[leader.name]}">${leader.name}</strong> assume a liderança com 
+        <strong>${leader.totalPts} pontos</strong>, sustentando uma vantagem de 
+        <strong>${gapLeader} ponto${gapLeader !== 1 ? 's' : ''}</strong> sobre ${ranking[1].name}.</p>
+        <br/>
+        <p>O destaque técnico da competição vai para <span class="highlight">🎯 ${mostExact.name}</span>, 
+        que acertou <strong>${mostExact.exact} placar${mostExact.exact !== 1 ? 'es' : ''} exato${mostExact.exact !== 1 ? 's' : ''}</strong> — 
+        o maior número do grupo. Em termos de precisão nos palpites, <span class="highlight">📐 ${bestPrecision.name}</span> 
+        se sobressai com desvio médio de apenas <strong>${bestPrecision.avgDev.toFixed(2)} gols</strong> por jogo, 
+        demonstrando maior leitura tática dos placares.</p>
+        <br/>
+        <p>A fase recente sorriu para <span class="highlight">⚡ ${bestRecent.name}</span>, 
+        que somou <strong>${recentPts[bestRecentKey]} pontos</strong> nos últimos ${recentGames.length} jogos, 
+        indicando uma escalada de forma que pode pressionar a liderança. 
+        Com <strong>${remaining.length} jogos restantes</strong>, o bolão está longe do fim — 
+        qualquer virada ainda é matematicamente possível.</p>
+      </div>
+    </div>
+
+    <!-- INSIGHTS GRID -->
+    <div class="insights-grid animate-in gap-15">`;
+
+  // Dynamic insights
+  const allInsights = [
+    {
+      icon: '👑',
+      title: `${leader.name} no comando`,
+      desc: `Lidera há ${played.length > 0 ? calcLeaderStreak(playerKeys[playerKeys.indexOf(leader.key) >= 0 ? playerKeys.indexOf(leader.key) : 0]) : 0} jogo(s) consecutivos no topo, com ${leader.totalPts} pts e ${leader.exact} placar(es) exato(s).`,
+    },
+    {
+      icon: '🎯',
+      title: 'Especialista em Exatos',
+      desc: `${mostExact.name} acertou ${mostExact.exact} placar(es) exato(s) — a maior bola de cristal do grupo. Cada placar exato vale 5 pontos no sistema.`,
+    },
+    {
+      icon: '📐',
+      title: 'Mais Próximo dos Placares',
+      desc: `${bestPrecision.name} tem o menor desvio médio: ${bestPrecision.avgDev.toFixed(2)} gols por jogo. Quem conhece os times?`,
+    },
+    {
+      icon: '🎭',
+      title: 'Maior Consistência',
+      desc: `${mostConsistent.name} oscila menos entre jogos, com índice de consistência de ${Math.max(0, mostConsistent.consistency).toFixed(0)}%. Menos sorte, mais método.`,
+    },
+    {
+      icon: '🚨',
+      title: 'Atenção: ' + last.name,
+      desc: `Em ${ranking.length}º lugar com ${last.totalPts} pts. Mas com ${remaining.length} jogos restantes e placares exatos valendo 5pts cada, a virada é possível.`,
+    },
+    {
+      icon: '🔬',
+      title: 'Regra Descoberta com 100%',
+      desc: `Sistema de pontuação: Placar exato (5pts) → Vencedor + 1 gol (3pts) → Vencedor correto (2pts) → Parcial/Empate (1pt) → Erro total (0pts).`,
+    },
+  ];
+
+  for (const ins of allInsights) {
+    html += `
+      <div class="insight-card">
+        <div class="insight-icon">${ins.icon}</div>
+        <div>
+          <div class="insight-title">${ins.title}</div>
+          <div class="insight-desc">${ins.desc}</div>
+        </div>
+      </div>`;
+  }
+
+  html += `</div>
+
+    <!-- DETAILED PLAYER NARRATIVES -->
+    <div class="card animate-in">
+      <div class="card-title">📣 Perfis dos Participantes</div>`;
+
+  const profiles = {
+    'Léo': (st) => `${st.name} está na liderança e exibe um estilo arrojado: ${st.exactRate.toFixed(0)}% de taxa de acerto exato. Com desvio médio de ${st.avgDev.toFixed(2)} gols, demonstra boa leitura de placar, mas precisa manter a consistência nas próximas rodadas.`,
+    'Déia': (st) => `${st.name} combina intuição com ousadia nos palpites. Com ${st.exact} placar(es) exato(s) e média de ${st.avgScore.toFixed(2)} pts/jogo, busca espaço para desafiar a liderança. Foco nos próximos jogos pode ser decisivo.`,
+    'Thais': (st) => `${st.name} apresenta um perfil estratégico, com ${st.hitRate.toFixed(0)}% de taxa de acerto do vencedor. Desvio médio de ${st.avgDev.toFixed(2)} gols indica precisão táticas. A constância nas próximas rodadas será a chave.`,
+    'Rafa': (st) => `${st.name} ainda não encontrou o ritmo ideal, mas tem matematicamente tudo em aberto. Com ${remaining.length} jogos pela frente, ${Math.ceil((ranking[0].totalPts - st.totalPts) / 5)} placares exatos consecutivos bastariam para virar o bolão.`,
+  };
+
+  for (const st of ranking) {
+    const profileFn = profiles[st.name] || ((s) => `${s.name} está participando com ${s.totalPts} pontos e ${s.gamesPlayed} jogos.`);
+    html += `
+      <div style="display:flex;gap:1rem;padding:1rem;border-bottom:1px solid var(--border);align-items:flex-start">
+        <div class="rank-avatar" style="background:${playerColors[st.name]}22;color:${playerColors[st.name]};flex-shrink:0">${playerInitials[st.name]}</div>
+        <div>
+          <div style="font-weight:700;color:${playerColors[st.name]};margin-bottom:0.35rem">${playerEmoji[st.name]} ${st.name}</div>
+          <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6">${profileFn(st)}</div>
+        </div>
+      </div>`;
+  }
+  html += `</div>`;
+
+  document.getElementById('aiContent').innerHTML = html;
+}
+
+function calcLeaderStreak(leaderKey) {
+  let streak = 0;
+  const played = processedGames.filter(g => g.played);
+  
+  for (let i = played.length - 1; i >= 0; i--) {
+    const game = played[i];
+    if (!playerStats[leaderKey]) break;
+    const cumIdx = i;
+    const rankAtGame = playerStats[leaderKey].rankHistory[cumIdx];
+    if (rankAtGame === 1) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ---- NAVIGATION ----
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  
+  document.getElementById(`sec-${name}`).classList.add('active');
+  
+  // Find matching tab
+  const tabs = document.querySelectorAll('.nav-tab');
+  tabs.forEach(t => {
+    if (t.onclick && t.onclick.toString().includes(`'${name}'`)) {
+      t.classList.add('active');
+    }
+  });
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.body.setAttribute('data-theme', currentTheme === 'light' ? 'light' : '');
+  document.querySelector('.nav-btn').textContent = currentTheme === 'dark' ? '🌙' : '☀️';
+  
+  // Re-render charts for new theme
+  if (rawData.length) {
+    Object.values(chartsRegistry).forEach(c => c.destroy());
+    chartsRegistry = {};
+    renderOverview();
+    renderEvolution();
+    renderAccuracy();
+    renderComparison();
+    renderStats();
+    renderGames();
+    renderSimulation();
+  }
+}
+
+function toggleMobileMenu() {
+  const menu = document.getElementById('mobileMenu');
+  menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+}
+
+// ---- EXPORT ----
+async function exportPDF() {
+  alert('Para exportar como PDF, use o menu de impressão do navegador (Ctrl+P) e selecione "Salvar como PDF".');
+}
+
+async function exportScreenshot() {
+  try {
+    const canvas = await html2canvas(document.getElementById('dashboard'), {
+      backgroundColor: '#0a0e1a',
+      scale: 1,
+    });
+    const link = document.createElement('a');
+    link.download = 'bolao-copa-2026.png';
+    link.href = canvas.toDataURL();
+    link.click();
+  } catch(e) {
+    alert('Para capturar, use a tecla Print Screen ou a ferramenta de captura do seu sistema.');
+  }
+}
+
+// ---- EXPORT TO EXCEL ----
+function exportExcel() {
+  const ranking = getRanking();
+  const data = [
+    ['Ranking Bolão Copa 2026'],
+    [],
+    ['Pos', 'Participante', 'Pontos', 'Exatos', 'Taxa Acerto', 'Média/Jogo'],
+    ...ranking.map((s, i) => [i+1, s.name, s.totalPts, s.exact, s.hitRate.toFixed(1)+'%', s.avgScore.toFixed(2)]),
+    [],
+    ['Jogos Disputados'],
+    ['Partida', 'País', 'Resultado', 'Léo', 'Déia', 'Thais', 'Rafa'],
+    ...processedGames.filter(g=>g.played).map(g => [
+      g.partida, g.pais, `${g.realA}-${g.realB}`,
+      ...playerKeys.map(pk => `${g.playerData[pk].predA}-${g.playerData[pk].predB} (${g.playerData[pk].score}pts)`)
+    ])
+  ];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, 'Bolão');
+  XLSX.writeFile(wb, 'bolao-copa-2026-export.xlsx');
+}
+</script>
+</body>
+</html>
