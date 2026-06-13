@@ -1128,7 +1128,8 @@ async function loadGoogleSheet() {
     } catch (error) {
         console.error("Erro ao carregar planilha do Google:", error);
         document.getElementById('loadingScreen').style.display = 'none';
-        showUpload();
+        // Agora, se der erro de conexão com o Google Sheets, ele abre o painel direto em vez de travar no upload
+        initDashboard();
     }
 }
 
