@@ -74,7 +74,12 @@ body {
 
 /* ---- UPLOAD SCREEN ---- */
 #uploadScreen {
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -83,6 +88,33 @@ body {
               radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.08) 0%, transparent 50%),
               var(--bg-primary);
   padding: 2rem;
+  backdrop-filter: blur(10px);
+}
+
+.upload-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-card);
+}
+
+.upload-close:hover {
+  background: var(--accent-red);
+  color: #fff;
+  border-color: var(--accent-red);
+  transform: scale(1.1);
 }
 
 .upload-hero {
@@ -906,8 +938,8 @@ tbody td {
 </head>
 <body>
 
-<!-- ===== UPLOAD SCREEN ===== -->
-<div id="uploadScreen">
+<div id="uploadScreen" style="display:none">
+  <button class="upload-close" onclick="hideUpload()">✕</button>
   <div class="upload-hero">
     <span class="trophy">🏆</span>
     <h1>Bolão Copa do Mundo 2026</h1>
@@ -925,9 +957,7 @@ tbody td {
   </div>
 </div>
 
-<!-- ===== DASHBOARD ===== -->
 <div id="dashboard">
-  <!-- TOP NAV -->
   <nav class="topnav">
     <div class="nav-brand">
       🏆 <span>Bolão Copa 2026</span>
@@ -941,6 +971,7 @@ tbody td {
       <button class="nav-tab" onclick="showSection('games')">⚽ Jogos</button>
       <button class="nav-tab" onclick="showSection('simulation')">🎲 Simulação</button>
       <button class="nav-tab" onclick="showSection('ai')">🤖 IA Analítica</button>
+      <button class="nav-tab" onclick="showUpload()">📤 Upload</button>
     </div>
     <div class="nav-actions">
       <button class="hamburger-btn" onclick="toggleMobileMenu()">☰</button>
@@ -950,7 +981,6 @@ tbody td {
     </div>
   </nav>
 
-  <!-- MOBILE MENU -->
   <div class="mobile-nav-overlay" id="mobileMenu">
     <button class="mobile-close" onclick="toggleMobileMenu()">✕</button>
     <div style="margin-top:2rem; display:flex; flex-direction:column; gap:0.5rem;">
@@ -962,47 +992,40 @@ tbody td {
       <button class="mobile-nav-tab" onclick="showSection('games'); toggleMobileMenu()">⚽ Jogos</button>
       <button class="mobile-nav-tab" onclick="showSection('simulation'); toggleMobileMenu()">🎲 Simulação</button>
       <button class="mobile-nav-tab" onclick="showSection('ai'); toggleMobileMenu()">🤖 IA Analítica</button>
+      <button class="mobile-nav-tab" onclick="showUpload(); toggleMobileMenu()">📤 Upload</button>
     </div>
   </div>
 
   <div class="main-content">
 
-    <!-- ======== SECTION: OVERVIEW ======== -->
     <div class="section active" id="sec-overview">
       <div id="overviewContent"></div>
     </div>
 
-    <!-- ======== SECTION: EVOLUTION ======== -->
     <div class="section" id="sec-evolution">
       <div id="evolutionContent"></div>
     </div>
 
-    <!-- ======== SECTION: ACCURACY ======== -->
     <div class="section" id="sec-accuracy">
       <div id="accuracyContent"></div>
     </div>
 
-    <!-- ======== SECTION: COMPARISON ======== -->
     <div class="section" id="sec-comparison">
       <div id="comparisonContent"></div>
     </div>
 
-    <!-- ======== SECTION: STATS ======== -->
     <div class="section" id="sec-stats">
       <div id="statsContent"></div>
     </div>
 
-    <!-- ======== SECTION: GAMES ======== -->
     <div class="section" id="sec-games">
       <div id="gamesContent"></div>
     </div>
 
-    <!-- ======== SECTION: SIMULATION ======== -->
     <div class="section" id="sec-simulation">
       <div id="simulationContent"></div>
     </div>
 
-    <!-- ======== SECTION: AI ======== -->
     <div class="section" id="sec-ai">
       <div id="aiContent"></div>
     </div>
@@ -1038,7 +1061,59 @@ let currentTheme = 'dark';
 let processedGames = [];
 let playerStats = {};
 
-// ---- UPLOAD HANDLING ----
+const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1nKB4cfub9g8ib9vMWDGF3L8naq9lMcR2b9VQKsUD43w/export?format=xlsx';
+
+// ---- INITIAL LOAD ----
+window.addEventListener('load', async () => {
+    try {
+        await loadGoogleSheet();
+    } catch (e) {
+        console.error(e);
+    }
+});
+
+async function loadGoogleSheet() {
+    try {
+        const response = await fetch(GOOGLE_SHEET_URL);
+        if (!response.ok) throw new Error('Falha no download da planilha');
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const data = new Uint8Array(arrayBuffer);
+        const wb = XLSX.read(data, { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rawData = XLSX.utils.sheet_to_json(ws, { defval: null });
+        
+        // Normalize column names
+        rawData = rawData.map(row => {
+            const normalized = {};
+            for (const [k, v] of Object.entries(row)) {
+                const key = k.trim()
+                    .replace('Pontuação Léo', 'pts_Leo')
+                    .replace('Pontuação Déia', 'pts_Déia')
+                    .replace('Pontuação Thais', 'pts_Thais')
+                    .replace('Pontuação Rafa', 'pts_Rafa');
+                normalized[key] = v;
+            }
+            return normalized;
+        });
+
+        initDashboard();
+    } catch (error) {
+        console.error("Erro ao carregar planilha do Google:", error);
+        showUpload();
+    }
+}
+
+// ---- UPLOAD VISIBILITY ----
+function showUpload() {
+    document.getElementById('uploadScreen').style.display = 'flex';
+}
+
+function hideUpload() {
+    document.getElementById('uploadScreen').style.display = 'none';
+}
+
+// ---- MANUAL UPLOAD HANDLING ----
 const dropZone = document.getElementById('dropZone');
 
 dropZone.addEventListener('dragover', e => {
@@ -1359,7 +1434,6 @@ function renderOverview() {
   const podiumClasses = ['gold', 'silver', 'bronze'];
 
   let html = `
-    <!-- PODIUM CARDS -->
     <div class="podium-cards animate-in gap-15">`;
   
   for (let i = 0; i < 3; i++) {
@@ -2516,7 +2590,6 @@ function renderAI() {
       <div class="section-title">🤖 IA Analítica</div>
     </div>
 
-    <!-- EXECUTIVE SUMMARY -->
     <div class="ai-section animate-in gap-15">
       <div class="ai-header">
         <div class="ai-icon">🤖</div>
@@ -2546,7 +2619,6 @@ function renderAI() {
       </div>
     </div>
 
-    <!-- INSIGHTS GRID -->
     <div class="insights-grid animate-in gap-15">`;
 
   // Dynamic insights
@@ -2596,7 +2668,6 @@ function renderAI() {
 
   html += `</div>
 
-    <!-- DETAILED PLAYER NARRATIVES -->
     <div class="card animate-in">
       <div class="card-title">📣 Perfis dos Participantes</div>`;
 
