@@ -1460,31 +1460,30 @@ function chartDefaults() {
 
 // ---- SECTION: OVERVIEW ----
 function renderOverview() {
-  const ranking = getRanking();
+  // CRITÉRIO DE DESEMPATE: Pontos primeiro, depois acertos exatos
+  const ranking = getRanking().sort((a, b) => b.totalPts - a.totalPts || b.exact - a.exact);
   const played = processedGames.filter(g => g.played);
   const totalPts = ranking.reduce((a, s) => a + s.totalPts, 0);
 
   const medals = ['🥇', '🥈', '🥉', '🪨'];
   const podiumClasses = ['gold', 'silver', 'bronze', 'stone'];
 
+// PODIUM CARDS: Grid forçado em 4 colunas
   let html = `
-    <div class="podium-cards animate-in gap-15" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">`;
+    <div class="podium-cards animate-in gap-15" style="display: grid; grid-template-columns: repeat(4, 1fr);">`;
   
   const displayCount = Math.min(4, ranking.length);
   for (let i = 0; i < displayCount; i++) {
     const st = ranking[i];
     const pct = totalPts > 0 ? (st.totalPts / totalPts * 100).toFixed(1) : '0.0';
     
-    let label = '';
-    if (i === 0) label = '🏆 Líder';
-    else if (i === 1) label = '⬆️ Vice-líder';
-    else if (i === 2) label = '3º Lugar';
-    else label = '🔦 Lanterna';
+    let label = i === 0 ? '🏆 Líder' : i === 1 ? '⬆️ Vice-líder' : i === 2 ? '3º Lugar' : '🔦 Lanterna';
 
-    const extraStyle = i === 3 ? 'border-top: 4px solid #78716c; background: linear-gradient(to bottom, #78716c15, transparent);' : '';
+    // Se for o 4º (i===3), aplicamos o estilo de fundo branco translúcido e borda leve diretamente
+    const lanterStyle = i === 3 ? 'background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2);' : '';
 
     html += `
-      <div class="podium-card ${podiumClasses[i]}" style="${extraStyle}">
+      <div class="podium-card ${podiumClasses[i]}" style="${lanterStyle}">
         <div class="medal">${medals[i]}</div>
         <div class="p-label">${label}</div>
         <div class="p-name" style="color:${playerColors[st.name] || '#fff'}">${st.name}</div>
@@ -1494,40 +1493,24 @@ function renderOverview() {
   }
   html += `</div>`;
 
-  // === JOGOS DE HOJE (Filtro Super Blindado) ===
-  const today = new Date();
-  const dd = String(today.getDate()).padStart(2, '0');
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const yyyy = today.getFullYear();
-  const d = today.getDate();
-  const m = today.getMonth() + 1;
-
-  // Testa todas as combinações que o Excel/Sheets/Navegador pode inventar no formato de data
-  const todayFormats = [
-    `${dd}/${mm}/${yyyy}`, // Ex: 15/06/2026
-    `${d}/${m}/${yyyy}`,   // Ex: 15/6/2026
-    `${yyyy}-${mm}-${dd}`, // Ex: 2026-06-15
-    `${mm}/${dd}/${yyyy}`, // Ex: 06/15/2026
-    `${m}/${d}/${yyyy}`    // Ex: 6/15/2026
-  ];
-
+  // FILTRO DE DATA BLINDADO PARA "15-jun."
   const todaysGames = processedGames.filter(g => {
     if (!g.data) return false;
-    const sheetDate = String(g.data).trim();
-    // Verifica se a data da planilha contém algum dos formatos de "hoje"
-    return todayFormats.some(f => sheetDate.includes(f));
+    const dateStr = String(g.data).toLowerCase();
+    // Verifica se contém "15" E "jun" (ignora o resto da formatação)
+    return dateStr.includes('15') && dateStr.includes('jun');
   });
 
   html += `
     <div class="card animate-in gap-15">
-      <div class="card-title">📅 Palpites de Hoje</div>
+      <div class="card-title">📅 Palpites de Hoje (15/06)</div>
       ${todaysGames.length > 0 ? `
         <div class="table-wrapper">
           <table>
             <thead>
               <tr>
                 <th>Partida</th>
-                ${playerKeys.map(pk => `<th class="td-center" style="color:${playerColors[playerStats[pk]?.name] || '#fff'}">${playerStats[pk]?.name || pk}</th>`).join('')}
+                ${playerKeys.map(pk => `<th class="td-center" style="color:${playerColors[playerStats[pk]?.name]}">${playerStats[pk]?.name}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -1543,7 +1526,7 @@ function renderOverview() {
             </tbody>
           </table>
         </div>
-      ` : `<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum jogo programado para hoje. Aproveite a folga! 🏖️</div>`}
+      ` : `<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum jogo programado para hoje.</div>`}
     </div>
   `;
 
