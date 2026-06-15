@@ -1484,6 +1484,43 @@ function renderOverview() {
   }
   html += `</div>`;
 
+  // === NOVO: JOGOS DE HOJE ===
+  // Pega a data de hoje no formato DD/MM/YYYY
+  const todayStr = new Date().toLocaleDateString('pt-BR'); 
+  // DICA: Para testar o visual antes da Copa começar, descomente a linha abaixo e coloque uma data que exista na sua planilha:
+  // const todayStr = '15/06/2026'; 
+
+  const todaysGames = processedGames.filter(g => g.data === todayStr);
+
+  html += `
+    <div class="card animate-in gap-15">
+      <div class="card-title">📅 Palpites de Hoje (${todayStr})</div>
+      ${todaysGames.length > 0 ? `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Partida</th>
+                ${playerKeys.map(pk => `<th class="td-center" style="color:${playerColors[playerStats[pk].name]}">${playerStats[pk].name}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${todaysGames.map(g => `
+                <tr>
+                  <td><span style="font-size:0.8rem;color:var(--text-secondary)">#${g.partida}</span><br><strong>${g.pais}</strong></td>
+                  ${playerKeys.map(pk => {
+                    const p = g.playerData[pk];
+                    return `<td class="td-center"><strong>${p.hasPred ? `${p.predA} - ${p.predB}` : '<span style="color:var(--text-muted)">⏳</span>'}</strong></td>`;
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : `<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum jogo programado para hoje. Aproveite a folga! 🏖️</div>`}
+    </div>
+  `;
+
   // MINI STATS
   html += `
     <div class="mini-stats animate-in gap-15">
@@ -1670,13 +1707,16 @@ function renderEvolution() {
   const played = processedGames.filter(g => g.played);
   const labels = played.map((g, i) => `J${i+1}`);
   
+  // Extrai datas únicas para o novo gráfico
+  const uniqueDates = [...new Set(played.map(g => g.data))];
+  
   let html = `
     <div class="section-header">
       <div class="section-title">📈 Evolução do Bolão</div>
     </div>
 
     <div class="card gap-15 animate-in">
-      <div class="card-title">🏆 Pontuação Acumulada</div>
+      <div class="card-title">🏆 Pontuação Acumulada (Por Jogo)</div>
       <div class="chart-container" style="height:320px">
         <canvas id="cumulativeChart"></canvas>
       </div>
@@ -1697,7 +1737,7 @@ function renderEvolution() {
       </div>
     </div>
 
-    <div class="card animate-in">
+    <div class="card animate-in gap-15">
       <div class="card-title">👑 Linha do Tempo de Liderança</div>
       <div class="chart-container" style="height:260px">
         <canvas id="leaderTimelineChart"></canvas>
@@ -1705,16 +1745,16 @@ function renderEvolution() {
     </div>
 
     <div class="card animate-in">
-      <div class="card-title">🎯 Posição no Ranking (por jogo)</div>
-      <div class="chart-container" style="height:260px">
-        <canvas id="rankPosChart"></canvas>
+      <div class="card-title">📅 Pontuação Acumulada por Data</div>
+      <div class="chart-container" style="height:300px">
+        <canvas id="dateEvolutionChart"></canvas>
       </div>
     </div>`;
 
   document.getElementById('evolutionContent').innerHTML = html;
   
   setTimeout(() => {
-    // Cumulative
+    // Cumulative (Por Jogo)
     createChart('cumulativeChart', {
       type: 'line',
       data: {
@@ -1752,7 +1792,7 @@ function renderEvolution() {
     });
 
     // Per round
-    const rounds = [...new Set(processedGames.filter(g=>g.played).map(g=>g.rodada))];
+    const rounds = [...new Set(played.map(g=>g.rodada))];
     createChart('perRoundChart', {
       type: 'bar',
       data: {
@@ -1811,34 +1851,37 @@ function renderEvolution() {
       }
     });
 
-    // Rank position
-    createChart('rankPosChart', {
+    // NOVO GRÁFICO POR DATA
+    const dateCumulative = {};
+    playerKeys.forEach(pk => dateCumulative[pk] = []);
+    let runningTotal = { Leo: 0, 'Déia': 0, Thais: 0, Rafa: 0 };
+    
+    uniqueDates.forEach(date => {
+       const gamesOnDate = played.filter(g => g.data === date);
+       gamesOnDate.forEach(g => {
+          playerKeys.forEach(pk => {
+             runningTotal[pk] += (g.playerData[pk].score || 0);
+          });
+       });
+       playerKeys.forEach(pk => dateCumulative[pk].push(runningTotal[pk]));
+    });
+
+    createChart('dateEvolutionChart', {
       type: 'line',
       data: {
-        labels,
+        labels: uniqueDates,
         datasets: playerKeys.map(pk => ({
           label: playerStats[pk].name,
-          data: playerStats[pk].rankHistory,
+          data: dateCumulative[pk],
           borderColor: playerColors[playerStats[pk].name],
           backgroundColor: 'transparent',
-          borderWidth: 2,
+          borderWidth: 2.5,
           tension: 0.3,
           pointRadius: 5,
-          pointStyle: 'circle',
           pointHoverRadius: 8,
         }))
       },
-      options: {
-        ...chartDefaults(),
-        scales: {
-          ...chartDefaults().scales,
-          y: {
-            ...chartDefaults().scales.y,
-            reverse: true, min: 1, max: 4,
-            ticks: { ...chartDefaults().scales.y.ticks, stepSize: 1, callback: v => `${v}º` }
-          }
-        }
-      }
+      options: { ...chartDefaults() }
     });
   }, 50);
 }
@@ -2210,19 +2253,27 @@ function renderStats() {
 
     <div class="insights-grid animate-in gap-15">`;
 
-  // Best streaks
-  const bestStreak = ranking.reduce((a,b) => a.streakHit > b.streakHit ? a : b);
-  const mostConsistent = ranking.reduce((a,b) => a.consistency > b.consistency ? a : b);
-  const bestPrecision = ranking.reduce((a,b) => a.avgDev < b.avgDev ? a : b);
-  const mostExact = ranking.reduce((a,b) => a.exact > b.exact ? a : b);
-  const bestAvg = ranking.reduce((a,b) => a.avgScore > b.avgScore ? a : b);
+  // === NOVO: LÓGICA DE EMPATES ===
+  const maxStreak = Math.max(...ranking.map(s => s.streakHit));
+  const minDev = Math.min(...ranking.map(s => s.avgDev));
+  const maxConsist = Math.max(...ranking.map(s => s.consistency));
+  const maxExact = Math.max(...ranking.map(s => s.exact));
+  const maxAvg = Math.max(...ranking.map(s => s.avgScore));
+
+  const getNames = (filterFn) => ranking.filter(filterFn).map(s => s.name).join(', ');
+
+  const bestStreakNames = getNames(s => s.streakHit === maxStreak);
+  const bestPrecisionNames = getNames(s => s.avgDev === minDev);
+  const mostConsistentNames = getNames(s => s.consistency === maxConsist);
+  const mostExactNames = getNames(s => s.exact === maxExact);
+  const bestAvgNames = getNames(s => s.avgScore === maxAvg);
 
   const insights = [
-    { icon: '🔥', title: 'Maior Sequência de Acertos', desc: `${bestStreak.name} com ${bestStreak.streakHit} jogos consecutivos pontuando`, color: 'var(--accent-gold)' },
-    { icon: '🎯', title: 'Maior Precisão', desc: `${bestPrecision.name} com desvio médio de ${bestPrecision.avgDev.toFixed(2)} gols por jogo`, color: 'var(--accent-green)' },
-    { icon: '🏆', title: 'Mais Consistente', desc: `${mostConsistent.name} com índice de ${Math.max(0,mostConsistent.consistency).toFixed(0)}% de consistência`, color: 'var(--accent-blue)' },
-    { icon: '🎳', title: 'Mais Placares Exatos', desc: `${mostExact.name} com ${mostExact.exact} placar${mostExact.exact !== 1 ? 'es' : ''} exato${mostExact.exact !== 1 ? 's' : ''}`, color: 'var(--accent-purple)' },
-    { icon: '⚡', title: 'Melhor Média por Jogo', desc: `${bestAvg.name} com ${bestAvg.avgScore.toFixed(2)} pontos por jogo`, color: 'var(--accent-gold)' },
+    { icon: '🔥', title: 'Maior Sequência de Acertos', desc: `${bestStreakNames} com ${maxStreak} jogos consecutivos pontuando`, color: 'var(--accent-gold)' },
+    { icon: '🎯', title: 'Maior Precisão', desc: `${bestPrecisionNames} com desvio médio de ${minDev.toFixed(2)} gols por jogo`, color: 'var(--accent-green)' },
+    { icon: '🏆', title: 'Mais Consistente', desc: `${mostConsistentNames} com índice de ${Math.max(0,maxConsist).toFixed(0)}% de consistência`, color: 'var(--accent-blue)' },
+    { icon: '🎳', title: 'Mais Placares Exatos', desc: `${mostExactNames} com ${maxExact} placar(es) exato(s)`, color: 'var(--accent-purple)' },
+    { icon: '⚡', title: 'Melhor Média por Jogo', desc: `${bestAvgNames} com ${maxAvg.toFixed(2)} pontos por jogo`, color: 'var(--accent-gold)' },
     { icon: '📈', title: 'Melhor Aproveitamento', desc: `${ranking[0].name} lidera com ${ranking[0].totalPts} pontos totais`, color: 'var(--accent-green)' },
   ];
 
@@ -2330,12 +2381,24 @@ function renderStats() {
 function renderGames() {
   const played = processedGames.filter(g => g.played);
   
+  // === NOVO: LÓGICA DE FILTRAGEM REFINADA ===
   // Per-game total points (sum across players)
   const gameScores = played.map(g => {
     const total = playerKeys.reduce((a, pk) => a + (g.playerData[pk].score || 0), 0);
+    
+    // Todos pontuaram algo neste jogo
     const allCorrect = playerKeys.every(pk => g.playerData[pk].score > 0);
-    const noneCorrect = playerKeys.every(pk => g.playerData[pk].score === 0);
-    const allExact = playerKeys.every(pk => g.playerData[pk].score === 5);
+    
+    // NINGUÉM pontuou (soma = 0, desde que o jogo já tenha acontecido)
+    const noneCorrect = total === 0;
+    
+    // TODOS cravaram (Mesmo com pesos futuros, a regra de ouro é: Palpite == Real)
+    const allExact = playerKeys.every(pk => 
+        g.playerData[pk].hasPred && 
+        g.playerData[pk].predA === g.realA && 
+        g.playerData[pk].predB === g.realB
+    );
+    
     return { ...g, totalPts: total, allCorrect, noneCorrect, allExact };
   });
 
