@@ -1464,20 +1464,35 @@ function renderOverview() {
   const played = processedGames.filter(g => g.played);
   const totalPts = ranking.reduce((a, s) => a + s.totalPts, 0);
 
-  const medals = ['🥇', '🥈', '🥉', '💔'];
-  const podiumClasses = ['gold', 'silver', 'bronze'];
+  // NOVO: Adicionada a medalha de pedra e a classe 'stone'
+  const medals = ['🥇', '🥈', '🥉', '🪨'];
+  const podiumClasses = ['gold', 'silver', 'bronze', 'stone'];
 
   let html = `
     <!-- PODIUM CARDS -->
-    <div class="podium-cards animate-in gap-15">`;
+    <!-- Forçando o grid para aceitar 4 colunas perfeitamente no desktop -->
+    <div class="podium-cards animate-in gap-15" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">`;
   
-  for (let i = 0; i < 3; i++) {
+  // NOVO: Loop agora vai até 4 (ou o limite do ranking)
+  const displayCount = Math.min(4, ranking.length);
+  for (let i = 0; i < displayCount; i++) {
     const st = ranking[i];
     const pct = totalPts > 0 ? (st.totalPts / totalPts * 100).toFixed(1) : '0.0';
+    
+    // Lógica dos rótulos
+    let label = '';
+    if (i === 0) label = '🏆 Líder';
+    else if (i === 1) label = '⬆️ Vice-líder';
+    else if (i === 2) label = '3º Lugar';
+    else label = '🔦 Lanterna';
+
+    // Estilo injetado direto para o card de pedra caso você não tenha a classe .stone no CSS
+    const extraStyle = i === 3 ? 'border-top: 4px solid #78716c; background: linear-gradient(to bottom, #78716c15, transparent);' : '';
+
     html += `
-      <div class="podium-card ${podiumClasses[i]}">
+      <div class="podium-card ${podiumClasses[i]}" style="${extraStyle}">
         <div class="medal">${medals[i]}</div>
-        <div class="p-label">${i === 0 ? '🏆 Líder' : i === 1 ? '⬆️ Vice-líder' : '3º Lugar'}</div>
+        <div class="p-label">${label}</div>
         <div class="p-name" style="color:${playerColors[st.name]}">${st.name}</div>
         <div class="p-pts">${st.totalPts}</div>
         <div class="p-sub">${pct}% dos pontos totais</div>
@@ -1485,11 +1500,9 @@ function renderOverview() {
   }
   html += `</div>`;
 
-  // === NOVO: JOGOS DE HOJE (FILTRO DE DATAS BLINDADO) ===
+  // === JOGOS DE HOJE (FILTRO DE DATAS BLINDADO) ===
   const today = new Date();
-  // Formato com zeros: "15/06/2026"
   let todayStr = today.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  // Formato sem zeros: "15/6/2026"
   let todayStrNoZeros = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
 
   // DICA: Para testar com a data do seu print, descomente as duas linhas abaixo:
@@ -1498,10 +1511,7 @@ function renderOverview() {
 
   const todaysGames = processedGames.filter(g => {
     if (!g.data) return false;
-    // Converte para texto e remove espaços em branco sobrando
     const sheetDate = String(g.data).trim();
-    
-    // O includes() verifica se a data está lá dentro, ignorando horários (ex: "15/06/2026 16:00")
     return sheetDate.includes(todayStr) || sheetDate.includes(todayStrNoZeros);
   });
 
@@ -1568,7 +1578,7 @@ function renderOverview() {
     const shareTotal = totalPts > 0 ? (st.totalPts / totalPts * 100).toFixed(1) : '0';
     html += `
       <div class="ranking-item rank-${i+1}">
-        <div class="rank-medal">${medals[i]}</div>
+        <div class="rank-medal">${medals[i] || '🎖️'}</div>
         <div class="rank-avatar bg-${st.key.toLowerCase() === 'déia' ? 'deia' : st.key.toLowerCase()}" 
              style="background:${playerColors[st.name]}22; color:${playerColors[st.name]}">
           ${playerInitials[st.name]}
