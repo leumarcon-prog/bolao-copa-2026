@@ -1468,6 +1468,7 @@ function renderOverview() {
   const podiumClasses = ['gold', 'silver', 'bronze'];
 
   let html = `
+    <!-- PODIUM CARDS -->
     <div class="podium-cards animate-in gap-15">`;
   
   for (let i = 0; i < 3; i++) {
@@ -1484,13 +1485,25 @@ function renderOverview() {
   }
   html += `</div>`;
 
-  // === NOVO: JOGOS DE HOJE ===
-  // Pega a data de hoje no formato DD/MM/YYYY
-  const todayStr = new Date().toLocaleDateString('pt-BR'); 
-  // DICA: Para testar o visual antes da Copa começar, descomente a linha abaixo e coloque uma data que exista na sua planilha:
-  // const todayStr = '15/06/2026'; 
+  // === NOVO: JOGOS DE HOJE (FILTRO DE DATAS BLINDADO) ===
+  const today = new Date();
+  // Formato com zeros: "15/06/2026"
+  let todayStr = today.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  // Formato sem zeros: "15/6/2026"
+  let todayStrNoZeros = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
 
-  const todaysGames = processedGames.filter(g => g.data === todayStr);
+  // DICA: Para testar com a data do seu print, descomente as duas linhas abaixo:
+  // todayStr = '15/06/2026';
+  // todayStrNoZeros = '15/6/2026';
+
+  const todaysGames = processedGames.filter(g => {
+    if (!g.data) return false;
+    // Converte para texto e remove espaços em branco sobrando
+    const sheetDate = String(g.data).trim();
+    
+    // O includes() verifica se a data está lá dentro, ignorando horários (ex: "15/06/2026 16:00")
+    return sheetDate.includes(todayStr) || sheetDate.includes(todayStrNoZeros);
+  });
 
   html += `
     <div class="card animate-in gap-15">
@@ -1636,70 +1649,6 @@ function renderOverview() {
     renderRankingChart();
     renderRankEvolutionMini();
   }, 50);
-}
-
-function renderRankingChart() {
-  const ranking = getRanking();
-  createChart('rankingChart', {
-    type: 'bar',
-    data: {
-      labels: ranking.map(s => s.name),
-      datasets: [{
-        label: 'Pontos Totais',
-        data: ranking.map(s => s.totalPts),
-        backgroundColor: ranking.map(s => playerColors[s.name] + 'cc'),
-        borderColor: ranking.map(s => playerColors[s.name]),
-        borderWidth: 2,
-        borderRadius: 8,
-      }]
-    },
-    options: {
-      ...chartDefaults(),
-      plugins: {
-        ...chartDefaults().plugins,
-        legend: { display: false }
-      }
-    }
-  });
-}
-
-function renderRankEvolutionMini() {
-  const played = processedGames.filter(g => g.played);
-  if (!played.length) return;
-  const labels = played.map((g, i) => `J${i+1}`);
-  
-  createChart('rankEvolutionMini', {
-    type: 'line',
-    data: {
-      labels,
-      datasets: playerKeys.map(pk => ({
-        label: playerStats[pk].name,
-        data: playerStats[pk].rankHistory,
-        borderColor: playerColors[playerStats[pk].name],
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-      }))
-    },
-    options: {
-      ...chartDefaults(),
-      scales: {
-        ...chartDefaults().scales,
-        y: {
-          ...chartDefaults().scales.y,
-          reverse: true,
-          min: 1, max: 4,
-          ticks: { 
-            ...chartDefaults().scales.y.ticks,
-            stepSize: 1,
-            callback: v => `${v}º`
-          }
-        }
-      }
-    }
-  });
 }
 
 // ---- SECTION: EVOLUTION ----
