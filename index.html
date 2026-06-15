@@ -1464,67 +1464,70 @@ function renderOverview() {
   const played = processedGames.filter(g => g.played);
   const totalPts = ranking.reduce((a, s) => a + s.totalPts, 0);
 
-  // NOVO: Adicionada a medalha de pedra e a classe 'stone'
   const medals = ['🥇', '🥈', '🥉', '🪨'];
   const podiumClasses = ['gold', 'silver', 'bronze', 'stone'];
 
   let html = `
-    <!-- PODIUM CARDS -->
-    <!-- Forçando o grid para aceitar 4 colunas perfeitamente no desktop -->
-    <div class="podium-cards animate-in gap-15" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">`;
+    <div class="podium-cards animate-in gap-15" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">`;
   
-  // NOVO: Loop agora vai até 4 (ou o limite do ranking)
   const displayCount = Math.min(4, ranking.length);
   for (let i = 0; i < displayCount; i++) {
     const st = ranking[i];
     const pct = totalPts > 0 ? (st.totalPts / totalPts * 100).toFixed(1) : '0.0';
     
-    // Lógica dos rótulos
     let label = '';
     if (i === 0) label = '🏆 Líder';
     else if (i === 1) label = '⬆️ Vice-líder';
     else if (i === 2) label = '3º Lugar';
     else label = '🔦 Lanterna';
 
-    // Estilo injetado direto para o card de pedra caso você não tenha a classe .stone no CSS
     const extraStyle = i === 3 ? 'border-top: 4px solid #78716c; background: linear-gradient(to bottom, #78716c15, transparent);' : '';
 
     html += `
       <div class="podium-card ${podiumClasses[i]}" style="${extraStyle}">
         <div class="medal">${medals[i]}</div>
         <div class="p-label">${label}</div>
-        <div class="p-name" style="color:${playerColors[st.name]}">${st.name}</div>
+        <div class="p-name" style="color:${playerColors[st.name] || '#fff'}">${st.name}</div>
         <div class="p-pts">${st.totalPts}</div>
         <div class="p-sub">${pct}% dos pontos totais</div>
       </div>`;
   }
   html += `</div>`;
 
-  // === JOGOS DE HOJE (FILTRO DE DATAS BLINDADO) ===
+  // === JOGOS DE HOJE (Filtro Super Blindado) ===
   const today = new Date();
-  let todayStr = today.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  let todayStrNoZeros = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+  const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const yyyy = today.getFullYear();
+  const d = today.getDate();
+  const m = today.getMonth() + 1;
 
-  // DICA: Para testar com a data do seu print, descomente as duas linhas abaixo:
-  // todayStr = '15/06/2026';
-  // todayStrNoZeros = '15/6/2026';
+  // Testa todas as combinações que o Excel/Sheets/Navegador pode inventar no formato de data
+  const todayFormats = [
+    `${dd}/${mm}/${yyyy}`, // Ex: 15/06/2026
+    `${d}/${m}/${yyyy}`,   // Ex: 15/6/2026
+    `${yyyy}-${mm}-${dd}`, // Ex: 2026-06-15
+    `${mm}/${dd}/${yyyy}`, // Ex: 06/15/2026
+    `${m}/${d}/${yyyy}`    // Ex: 6/15/2026
+  ];
 
   const todaysGames = processedGames.filter(g => {
     if (!g.data) return false;
     const sheetDate = String(g.data).trim();
-    return sheetDate.includes(todayStr) || sheetDate.includes(todayStrNoZeros);
+    // Verifica se a data da planilha contém algum dos formatos de "hoje"
+    return todayFormats.some(f => sheetDate.includes(f));
   });
 
   html += `
     <div class="card animate-in gap-15">
-      <div class="card-title">📅 Palpites de Hoje (${todayStr})</div>
+      <div class="card-title">📅 Palpites de Hoje</div>
       ${todaysGames.length > 0 ? `
         <div class="table-wrapper">
           <table>
             <thead>
               <tr>
                 <th>Partida</th>
-                ${playerKeys.map(pk => `<th class="td-center" style="color:${playerColors[playerStats[pk].name]}">${playerStats[pk].name}</th>`).join('')}
+                ${playerKeys.map(pk => `<th class="td-center" style="color:${playerColors[playerStats[pk]?.name] || '#fff'}">${playerStats[pk]?.name || pk}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -1532,7 +1535,7 @@ function renderOverview() {
                 <tr>
                   <td><span style="font-size:0.8rem;color:var(--text-secondary)">#${g.partida}</span><br><strong>${g.pais}</strong></td>
                   ${playerKeys.map(pk => {
-                    const p = g.playerData[pk];
+                    const p = g.playerData[pk] || {};
                     return `<td class="td-center"><strong>${p.hasPred ? `${p.predA} - ${p.predB}` : '<span style="color:var(--text-muted)">⏳</span>'}</strong></td>`;
                   }).join('')}
                 </tr>
@@ -1581,7 +1584,7 @@ function renderOverview() {
         <div class="rank-medal">${medals[i] || '🎖️'}</div>
         <div class="rank-avatar bg-${st.key.toLowerCase() === 'déia' ? 'deia' : st.key.toLowerCase()}" 
              style="background:${playerColors[st.name]}22; color:${playerColors[st.name]}">
-          ${playerInitials[st.name]}
+          ${typeof playerInitials !== 'undefined' ? playerInitials[st.name] : st.name.charAt(0)}
         </div>
         <div class="rank-info">
           <div class="rank-name">${st.name}</div>
@@ -1654,11 +1657,55 @@ function renderOverview() {
 
   document.getElementById('overviewContent').innerHTML = html;
   
-  // Render charts
+  // ==========================================
+  // CORREÇÃO: CRIAÇÃO DOS GRÁFICOS RESTAURADA
+  // ==========================================
   setTimeout(() => {
-    renderRankingChart();
-    renderRankEvolutionMini();
-  }, 50);
+    if (typeof createChart === 'function') {
+      
+      // 1. Gráfico de Pontos por Participante (Ranking)
+      createChart('rankingChart', {
+        type: 'bar',
+        data: {
+          labels: ranking.map(s => s.name),
+          datasets: [{
+            label: 'Pontos Totais',
+            data: ranking.map(s => s.totalPts),
+            backgroundColor: ranking.map(s => (playerColors[s.name] || '#666') + 'cc'),
+            borderColor: ranking.map(s => playerColors[s.name] || '#666'),
+            borderWidth: 2,
+            borderRadius: 6
+          }]
+        },
+        options: { 
+          ...chartDefaults(),
+          plugins: { ...chartDefaults().plugins, legend: { display: false } }
+        }
+      });
+
+      // 2. Gráfico de Evolução da Liderança (Mini)
+      const labels = played.map((g, i) => `J${i+1}`);
+      createChart('rankEvolutionMini', {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: playerKeys.map(pk => ({
+            label: playerStats[pk].name,
+            data: playerStats[pk].ptsCumulative,
+            borderColor: playerColors[playerStats[pk].name],
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.3,
+            pointRadius: 2
+          }))
+        },
+        options: { 
+          ...chartDefaults(),
+          plugins: { ...chartDefaults().plugins, legend: { display: true, position: 'top' } }
+        }
+      });
+    }
+  }, 100);
 }
 
 // ---- SECTION: EVOLUTION ----
