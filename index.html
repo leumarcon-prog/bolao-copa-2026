@@ -2931,7 +2931,11 @@ window.generatePalpitesTableHtml = function(dateStr) {
           ${filteredGames.map(g => {
             // VERIFICA SE TEM PLACAR REAL PREENCHIDO NA PLANILHA
             let realScoreHtml = '';
-            if (g.realA !== undefined && g.realA !== '' && g.realB !== undefined && g.realB !== '') {
+            
+            // Função rápida para barrar vazios e a palavra "null"
+            const isValid = (val) => val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim().toLowerCase() !== 'null';
+
+            if (isValid(g.realA) && isValid(g.realB)) {
                 realScoreHtml = `<br><span style="font-size:0.85rem; color:var(--accent-gold); font-weight:bold;">(${g.realA} x ${g.realB})</span>`;
             }
 
