@@ -1506,50 +1506,51 @@ function renderOverview() {
   }
   html += `</div>`;
 
-  // === CONFIGURAÇÃO DINÂMICA DA DATA DE HOJE ===
+// === CONFIGURAÇÃO DO FILTRO DE DATAS ===
+  // 1. Coleta todas as datas únicas que existem na sua planilha
+  const uniqueDates = [...new Set(processedGames.map(g => String(g.data).trim()).filter(d => d && d !== 'undefined'))];
+  
+  // 2. Descobre a data de hoje para tentar pré-selecionar
   const today = new Date();
   const dd = String(today.getDate()).padStart(2, '0');
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const labelDate = `${dd}/${mm}`; 
+  const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const mmName = monthNames[today.getMonth()];
+  const todayPlanilhaStr = `${dd}-${mmName}`; // Gera formato "16-jun"
+  
+  // Se ainda não houver filtro, procura a data de hoje. Se hoje não tiver jogo, pega a primeira data da planilha.
+  if (!window.currentFilterDate) {
+    const todayMatch = uniqueDates.find(d => d.toLowerCase().includes(todayPlanilhaStr));
+    window.currentFilterDate = todayMatch || uniqueDates[0] || '';
+  }
 
-  const todaysGames = processedGames.filter(g => {
-    if (!g.data) return false;
-    const dateStr = String(g.data).toLowerCase();
-    return dateStr.includes(dd) && dateStr.includes('jun');
-  });
+  // 3. Cria as opções do menu dropdown (Seletor)
+  const optionsHtml = uniqueDates.map(d => {
+    let label = d;
+    // Tenta formatar a string de "16-jun." para "16/06" pra ficar bonito no menu
+    const strLow = d.toLowerCase().replace('.', '');
+    const parts = strLow.split('-');
+    if(parts.length === 2) {
+       const months = { 'jan':'01', 'fev':'02', 'mar':'03', 'abr':'04', 'mai':'05', 'jun':'06', 'jul':'07', 'ago':'08', 'set':'09', 'out':'10', 'nov':'11', 'dez':'12' };
+       label = `${parts[0].padStart(2,'0')}/${months[parts[1]] || parts[1]}`;
+    }
+    const isSelected = d === window.currentFilterDate ? 'selected' : '';
+    return `<option value="${d}" ${isSelected}>${label}</option>`;
+  }).join('');
 
+  // 4. Monta o HTML do Quadro com o Dropdown e o Container da tabela
   html += `
     <div class="card animate-in gap-15">
-      <div class="card-title">📅 Palpites de Hoje (${labelDate})</div>
-      ${todaysGames.length > 0 ? `
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Partida</th>
-                ${playerKeys.map(pk => `<th class="td-center" style="color:${playerColors[playerStats[pk]?.name]}; white-space: nowrap;">${playerStats[pk]?.name}</th>`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${todaysGames.map(g => `
-                <tr>
-                  <td><span style="font-size:0.8rem;color:var(--text-secondary)">#${g.partida}</span><br><strong>${g.pais}</strong></td>
-                  ${playerKeys.map(pk => {
-                    const p = g.playerData[pk] || {};
-                    // 2. ADICIONADO white-space: nowrap; PARA O PLACAR NÃO QUEBRAR
-                    return `<td class="td-center" style="white-space: nowrap;"><strong>${p.hasPred ? `${p.predA} - ${p.predB}` : '<span style="color:var(--text-muted)">⏳</span>'}</strong></td>`;
-                  }).join('')}
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      ` : `<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum jogo programado para hoje. Aproveite a folga! 🏖️</div>`}
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div class="card-title" style="margin-bottom: 0;">📅 Palpites por Data</div>
+        <select id="dateFilterSelect" onchange="changePalpitesDate(this.value)" style="background: var(--bg-secondary); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; outline: none; cursor: pointer; font-family: inherit;">
+          ${optionsHtml}
+        </select>
+      </div>
+      <div id="palpites-table-container">
+        ${window.generatePalpitesTableHtml(window.currentFilterDate)}
+      </div>
     </div>
   `;
-
-  // O RESTANTE DO SEU CÓDIGO CONTINUA AQUI (MINI STATS, RANKING, ETC)...
-
 
   // MINI STATS
   html += `
@@ -2897,6 +2898,62 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, ws, 'Bolão');
   XLSX.writeFile(wb, 'bolao-copa-2026-export.xlsx');
 }
+
+// === FUNÇÕES GLOBAIS PARA O FILTRO DE DATAS ===
+window.currentFilterDate = null;
+
+window.changePalpitesDate = function(newDate) {
+  window.currentFilterDate = newDate;
+  const container = document.getElementById('palpites-table-container');
+  if (container) {
+    container.innerHTML = window.generatePalpitesTableHtml(newDate);
+  }
+};
+
+window.generatePalpitesTableHtml = function(dateStr) {
+  // Filtra os jogos pela data exata selecionada na planilha
+  const filteredGames = processedGames.filter(g => String(g.data).trim() === String(dateStr).trim());
+
+  if (filteredGames.length === 0) {
+    return `<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum jogo programado para esta data. 🏖️</div>`;
+  }
+
+  return `
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Partida</th>
+            ${playerKeys.map(pk => `<th class="td-center" style="color:${playerColors[playerStats[pk]?.name]}; white-space: nowrap;">${playerStats[pk]?.name}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${filteredGames.map(g => {
+            // VERIFICA SE TEM PLACAR REAL PREENCHIDO NA PLANILHA
+            let realScoreHtml = '';
+            if (g.realA !== undefined && g.realA !== '' && g.realB !== undefined && g.realB !== '') {
+                realScoreHtml = `<br><span style="font-size:0.85rem; color:var(--accent-gold); font-weight:bold;">(${g.realA} x ${g.realB})</span>`;
+            }
+
+            return `
+              <tr>
+                <td>
+                  <span style="font-size:0.8rem;color:var(--text-secondary)">#${g.partida}</span><br>
+                  <strong>${g.pais}</strong>${realScoreHtml}
+                </td>
+                ${playerKeys.map(pk => {
+                  const p = g.playerData[pk] || {};
+                  return `<td class="td-center" style="white-space: nowrap;"><strong>${p.hasPred ? `${p.predA} - ${p.predB}` : '<span style="color:var(--text-muted)">⏳</span>'}</strong></td>`;
+                }).join('')}
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+};
+
 </script>
 </body>
 </html>
