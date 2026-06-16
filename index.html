@@ -1460,7 +1460,7 @@ function chartDefaults() {
 
 // ---- SECTION: OVERVIEW ----
 function renderOverview() {
-  // CRITÉRIO DE DESEMPATE: Pontos primeiro, depois acertos exatos
+  // CRITÉRIO DE DESEMPATE: Pontos primeiro, depois placares exatos
   const ranking = getRanking().sort((a, b) => b.totalPts - a.totalPts || b.exact - a.exact);
   const played = processedGames.filter(g => g.played);
   const totalPts = ranking.reduce((a, s) => a + s.totalPts, 0);
@@ -1468,9 +1468,23 @@ function renderOverview() {
   const medals = ['🥇', '🥈', '🥉', '🪨'];
   const podiumClasses = ['gold', 'silver', 'bronze', 'stone'];
 
-// PODIUM CARDS: Grid forçado em 4 colunas
+  // 1. CSS INJETADO PARA RESPONSIVIDADE NO CELULAR
   let html = `
-    <div class="podium-cards animate-in gap-15" style="display: grid; grid-template-columns: repeat(4, 1fr);">`;
+    <style>
+      .podium-grid-custom {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+      }
+      /* Se a tela for menor que 768px (celulares), o pódio vira 2x2 */
+      @media (max-width: 768px) {
+        .podium-grid-custom {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+    
+    <div class="podium-cards animate-in podium-grid-custom">`;
   
   const displayCount = Math.min(4, ranking.length);
   for (let i = 0; i < displayCount; i++) {
@@ -1478,14 +1492,13 @@ function renderOverview() {
     const pct = totalPts > 0 ? (st.totalPts / totalPts * 100).toFixed(1) : '0.0';
     
     let label = i === 0 ? '🏆 Líder' : i === 1 ? '⬆️ Vice-líder' : i === 2 ? '3º Lugar' : '🔦 Lanterna';
-
-    // Se for o 4º (i===3), aplicamos o estilo de fundo branco translúcido e borda leve diretamente
     const lanterStyle = i === 3 ? 'background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2);' : '';
 
+    // Adicionado white-space: nowrap no label para "VICE-LÍDER" não quebrar ao meio
     html += `
       <div class="podium-card ${podiumClasses[i]}" style="${lanterStyle}">
         <div class="medal">${medals[i]}</div>
-        <div class="p-label">${label}</div>
+        <div class="p-label" style="white-space: nowrap;">${label}</div>
         <div class="p-name" style="color:${playerColors[st.name] || '#fff'}">${st.name}</div>
         <div class="p-pts">${st.totalPts}</div>
         <div class="p-sub">${pct}% dos pontos totais</div>
@@ -1493,7 +1506,7 @@ function renderOverview() {
   }
   html += `</div>`;
 
- // === CONFIGURAÇÃO DINÂMICA DA DATA DE HOJE ===
+  // === CONFIGURAÇÃO DINÂMICA DA DATA DE HOJE ===
   const today = new Date();
   const dd = String(today.getDate()).padStart(2, '0');
   const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -1514,7 +1527,7 @@ function renderOverview() {
             <thead>
               <tr>
                 <th>Partida</th>
-                ${playerKeys.map(pk => `<th class="td-center" style="color:${playerColors[playerStats[pk]?.name]}">${playerStats[pk]?.name}</th>`).join('')}
+                ${playerKeys.map(pk => `<th class="td-center" style="color:${playerColors[playerStats[pk]?.name]}; white-space: nowrap;">${playerStats[pk]?.name}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -1523,7 +1536,8 @@ function renderOverview() {
                   <td><span style="font-size:0.8rem;color:var(--text-secondary)">#${g.partida}</span><br><strong>${g.pais}</strong></td>
                   ${playerKeys.map(pk => {
                     const p = g.playerData[pk] || {};
-                    return `<td class="td-center"><strong>${p.hasPred ? `${p.predA} - ${p.predB}` : '<span style="color:var(--text-muted)">⏳</span>'}</strong></td>`;
+                    // 2. ADICIONADO white-space: nowrap; PARA O PLACAR NÃO QUEBRAR
+                    return `<td class="td-center" style="white-space: nowrap;"><strong>${p.hasPred ? `${p.predA} - ${p.predB}` : '<span style="color:var(--text-muted)">⏳</span>'}</strong></td>`;
                   }).join('')}
                 </tr>
               `).join('')}
@@ -1533,6 +1547,9 @@ function renderOverview() {
       ` : `<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum jogo programado para hoje. Aproveite a folga! 🏖️</div>`}
     </div>
   `;
+
+  // O RESTANTE DO SEU CÓDIGO CONTINUA AQUI (MINI STATS, RANKING, ETC)...
+
 
   // MINI STATS
   html += `
