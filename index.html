@@ -1493,17 +1493,21 @@ function renderOverview() {
   }
   html += `</div>`;
 
-  // FILTRO DE DATA BLINDADO PARA "15-jun."
+ // === CONFIGURAÇÃO DINÂMICA DA DATA DE HOJE ===
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const labelDate = `${dd}/${mm}`; 
+
   const todaysGames = processedGames.filter(g => {
     if (!g.data) return false;
     const dateStr = String(g.data).toLowerCase();
-    // Verifica se contém "15" E "jun" (ignora o resto da formatação)
-    return dateStr.includes('15') && dateStr.includes('jun');
+    return dateStr.includes(dd) && dateStr.includes('jun');
   });
 
   html += `
     <div class="card animate-in gap-15">
-      <div class="card-title">📅 Palpites de Hoje (15/06)</div>
+      <div class="card-title">📅 Palpites de Hoje (${labelDate})</div>
       ${todaysGames.length > 0 ? `
         <div class="table-wrapper">
           <table>
@@ -1526,7 +1530,7 @@ function renderOverview() {
             </tbody>
           </table>
         </div>
-      ` : `<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum jogo programado para hoje.</div>`}
+      ` : `<div style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum jogo programado para hoje. Aproveite a folga! 🏖️</div>`}
     </div>
   `;
 
