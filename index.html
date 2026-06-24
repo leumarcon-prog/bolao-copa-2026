@@ -1387,7 +1387,8 @@ function computeStats() {
       if (pts < st.worst) { st.worst = pts; st.worstGame = game.pais; }
 
       // Hit/miss classification
-      const baseResult = played && pd.hasPred ? calcScore(game.realA, game.realB, pd.predA, pd.predB, game.rodada) : null;
+      // CORREÇÃO 1: Usando game.played ao invés da variável played que não existia aqui
+      const baseResult = game.played && pd.hasPred ? calcScore(game.realA, game.realB, pd.predA, pd.predB, game.rodada) : null;
       const baseScore = baseResult ? baseResult.base : 0;
       if (baseScore === 5) { st.exact++; st.correctWinner++; }
       else if (baseScore === 3 || baseScore === 2) { st.correctWinner++; }
@@ -2593,6 +2594,9 @@ function renderGames() {
 
 // ---- SECTION: SIMULATION ----
 function renderSimulation() {
+  // CORREÇÃO 2: A variável ranking estava sendo usada mas não declarada aqui!
+  const ranking = getRanking(); 
+  
   // Max pts por jogo restante considera fase (eliminatória vale mais)
   const remaining = processedGames.filter(g => !g.played);
   const gamesLeft = remaining.length;
