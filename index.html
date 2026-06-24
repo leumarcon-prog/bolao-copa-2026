@@ -1194,24 +1194,69 @@ function processFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-// ---- SCORING FUNCTION ----
-function calcScore(ra, rb, pa, pb) {
+// ---- PESOS POR FASE ----
+// Grupos: ×1  → Cravada = 5pts
+// 16-avos: ×1.4 → Cravada = 7pts
+// Oitavas: ×2  → Cravada = 10pts
+// Quartas: ×3  → Cravada = 15pts
+// Semifinal: ×4 → Cravada = 20pts
+// 3º Lugar / Final: ×5 → Cravada = 25pts
+const PHASE_WEIGHTS = {
+  '1ª Rodada':              1,
+  '2ª Rodada':              1,
+  '3ª Rodada':              1,
+  '16-avos':                1.4,
+  '16-avos de Final':       1.4,
+  'Oitavas':                2,
+  'Oitavas de Final':       2,
+  'Quartas':                3,
+  'Quartas de Final':       3,
+  'Semifinal':              4,
+  'Semifinais':             4,
+  '3º Lugar':               5,
+  'Disputa de 3º Lugar':    5,
+  'Final':                  5,
+};
+
+function getPhaseWeight(rodada) {
+  if (!rodada) return 1;
+  const key = String(rodada).trim();
+  return PHASE_WEIGHTS[key] ?? 1;
+}
+
+// ---- SCORING FUNCTION (com peso por fase) ----
+// Retorna { base, weighted }
+// base = pontos base (0/1/2/3/5)
+// weighted = base * peso da fase (arredondado para 1 casa)
+function calcScore(ra, rb, pa, pb, rodada) {
   if (ra === null || rb === null || pa === null || pb === null) return null;
   ra = Number(ra); rb = Number(rb); pa = Number(pa); pb = Number(pb);
   if (isNaN(ra) || isNaN(rb) || isNaN(pa) || isNaN(pb)) return null;
 
-  // Exact score
-  if (ra === pa && rb === pb) return 5;
-
-  const realWinner = ra > rb ? 'A' : (ra < rb ? 'B' : 'D');
-  const predWinner = pa > pb ? 'A' : (pa < pb ? 'B' : 'D');
-
-  if (realWinner === predWinner) {
-    if (realWinner === 'D') return 1;
-    return (ra === pa || rb === pb) ? 3 : 2;
+  let base;
+  if (ra === pa && rb === pb) {
+    base = 5;
   } else {
-    return (ra === pa || rb === pb) ? 1 : 0;
+    const realWinner = ra > rb ? 'A' : (ra < rb ? 'B' : 'D');
+    const predWinner = pa > pb ? 'A' : (pa < pb ? 'B' : 'D');
+    if (realWinner === predWinner) {
+      if (realWinner === 'D') base = 1;
+      else base = (ra === pa || rb === pb) ? 3 : 2;
+    } else {
+      base = (ra === pa || rb === pb) ? 1 : 0;
+    }
   }
+
+  const weight = getPhaseWeight(rodada);
+  const weighted = Math.round(base * weight * 10) / 10;
+  return { base, weighted };
+}
+
+// Helper: retorna só o valor numérico ponderado (retrocompatível)
+function calcScoreValue(ra, rb, pa, pb, rodada) {
+  const r = calcScore(ra, rb, pa, pb, rodada);
+  if (r === null) return null;
+  return r.weighted;
 }
 
 // ---- INIT DASHBOARD ----
@@ -1265,15 +1310,10 @@ function processGames() {
       const pb = row[`${pk} B`] !== null ? Number(row[`${pk} B`]) : null;
       const hasPred = pa !== null && pb !== null && !isNaN(pa) && !isNaN(pb);
       
-      // Use stored score if game played, or calc if we have real
+      // Calcula sempre com peso por fase (ignora valor armazenado pois pode ser sem peso)
       let score = null;
       if (played && hasPred) {
-        // Try stored first, then calc
-        const storedKey = pk === 'Leo' ? 'pts_Leo' : `pts_${pk}`;
-        const stored = row[storedKey];
-        score = (stored !== null && stored !== undefined && !isNaN(Number(stored))) 
-          ? Number(stored) 
-          : calcScore(realA, realB, pa, pb);
+        score = calcScoreValue(realA, realB, pa, pb, rodada);
       }
 
       playerData[pk] = { predA: pa, predB: pb, hasPred, score };
@@ -1281,7 +1321,7 @@ function processGames() {
 
     processedGames.push({
       partida, rodada, pais, data: dataStr,
-      realA, realB, played, playerData
+      realA, realB, played, playerData, weight: getPhaseWeight(rodada)
     });
   }
 }
@@ -1347,9 +1387,11 @@ function computeStats() {
       if (pts < st.worst) { st.worst = pts; st.worstGame = game.pais; }
 
       // Hit/miss classification
-      if (pts === 5) { st.exact++; st.correctWinner++; }
-      else if (pts === 3 || pts === 2) { st.correctWinner++; }
-      else if (pts === 1) {
+      const baseResult = played && pd.hasPred ? calcScore(game.realA, game.realB, pd.predA, pd.predB, game.rodada) : null;
+      const baseScore = baseResult ? baseResult.base : 0;
+      if (baseScore === 5) { st.exact++; st.correctWinner++; }
+      else if (baseScore === 3 || baseScore === 2) { st.correctWinner++; }
+      else if (baseScore === 1) {
         const { predA, predB } = pd;
         const { realA, realB } = game;
         if (predA !== null && predA === predB && realA === realB) st.correctDraw++;
@@ -1623,10 +1665,11 @@ function renderOverview() {
       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem">
         <span style="font-size:1.5rem">📐</span>
         <div>
-          <div style="font-weight:700;font-size:1rem">Regra de Pontuação Deduzida</div>
-          <div style="font-size:0.8rem;color:var(--text-secondary)">Identificada automaticamente com <span class="badge badge-green">100% de confiança</span> em ${played.length} jogos disputados</div>
+          <div style="font-weight:700;font-size:1rem">Regra de Pontuação com Pesos por Fase</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary)">Pontuação base × peso da fase. Quanto mais avançada, mais vale cada palpite.</div>
         </div>
       </div>
+      <div style="font-weight:600;font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.5rem;margin-top:0.5rem">📊 Pontuação Base (igual em todas as fases)</div>
       <div class="rule-grid">
         <div class="rule-item" data-tooltip="Ambos os gols correspondem exatamente">
           <span class="rule-desc">🎯 Placar Exato</span>
@@ -1647,6 +1690,33 @@ function renderOverview() {
         <div class="rule-item" data-tooltip="Nenhuma correspondência">
           <span class="rule-desc">❌ Erro total</span>
           <span class="rule-pts">0 pts</span>
+        </div>
+      </div>
+      <div style="font-weight:600;font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.5rem;margin-top:1.25rem">🏆 Multiplicadores por Fase (Cravada máxima em cada fase)</div>
+      <div class="rule-grid">
+        <div class="rule-item" data-tooltip="Fase de Grupos — peso 1×">
+          <span class="rule-desc">🌍 Grupos</span>
+          <span class="rule-pts" style="color:#94a3b8">×1 <small style="font-size:0.7rem;opacity:0.7">(5pts)</small></span>
+        </div>
+        <div class="rule-item" data-tooltip="16-avos — peso 1.4×">
+          <span class="rule-desc">⚔️ 16-avos</span>
+          <span class="rule-pts" style="color:#60a5fa">×1.4 <small style="font-size:0.7rem;opacity:0.7">(7pts)</small></span>
+        </div>
+        <div class="rule-item" data-tooltip="Oitavas de Final — peso 2×">
+          <span class="rule-desc">🥊 Oitavas</span>
+          <span class="rule-pts" style="color:#34d399">×2 <small style="font-size:0.7rem;opacity:0.7">(10pts)</small></span>
+        </div>
+        <div class="rule-item" data-tooltip="Quartas de Final — peso 3×">
+          <span class="rule-desc">💥 Quartas</span>
+          <span class="rule-pts" style="color:#a78bfa">×3 <small style="font-size:0.7rem;opacity:0.7">(15pts)</small></span>
+        </div>
+        <div class="rule-item" data-tooltip="Semifinal — peso 4×">
+          <span class="rule-desc">🔥 Semifinal</span>
+          <span class="rule-pts" style="color:#fb923c">×4 <small style="font-size:0.7rem;opacity:0.7">(20pts)</small></span>
+        </div>
+        <div class="rule-item" data-tooltip="3º Lugar e Final — peso 5×. A cravada máxima!">
+          <span class="rule-desc">🏆 Final / 3º</span>
+          <span class="rule-pts" style="color:var(--accent-gold)">×5 <small style="font-size:0.7rem;opacity:0.7">(25pts!)</small></span>
         </div>
       </div>
     </div>`;
@@ -1981,8 +2051,9 @@ function renderAccuracy() {
 
   const played = processedGames.filter(g => g.played);
   for (const game of played) {
+    const weightLabel = game.weight > 1 ? ` <span style="font-size:0.65rem;color:var(--accent-gold)">×${game.weight}</span>` : '';
     html += `<tr>
-      <td><span style="font-size:0.75rem;color:var(--text-secondary)">#${game.partida}</span><br/><span style="font-size:0.78rem">${game.pais.split(' x ')[0]}</span></td>
+      <td><span style="font-size:0.75rem;color:var(--text-secondary)">#${game.partida}</span><br/><span style="font-size:0.78rem">${game.pais.split(' x ')[0]}</span>${weightLabel}</td>
       <td style="font-weight:700;white-space:nowrap">${game.realA} – ${game.realB}</td>`;
     for (const pk of playerKeys) {
       const pd = game.playerData[pk];
@@ -1994,7 +2065,9 @@ function renderAccuracy() {
       else if (score === 1) { bg = '#f5c51833'; color = '#f5c518'; }
       else if (score === 0) { bg = '#ef444433'; color = '#ef4444'; }
       const pred = pd.predA !== null ? `${pd.predA}-${pd.predB}` : '?';
-      html += `<td class="hm-cell" style="background:${bg};color:${color};font-weight:700" data-tooltip="${pred} → ${score}pts">${score !== null ? score : '–'}</td>`;
+      const ptsLabel = score !== null ? `${score}pts` : '–';
+      const basePts = score !== null && game.weight > 1 ? ` (base: ${Math.round(score/game.weight*10)/10}pts)` : '';
+      html += `<td class="hm-cell" style="background:${bg};color:${color};font-weight:700" data-tooltip="${pred} → ${ptsLabel}${basePts}">${score !== null ? score : '–'}</td>`;
     }
     html += `</tr>`;
   }
@@ -2520,36 +2593,30 @@ function renderGames() {
 
 // ---- SECTION: SIMULATION ----
 function renderSimulation() {
-  const played = processedGames.filter(g => g.played);
+  // Max pts por jogo restante considera fase (eliminatória vale mais)
   const remaining = processedGames.filter(g => !g.played);
-  const ranking = getRanking();
-  
-  // Max possible pts per game = 5
-  const maxPerGame = 5;
-  const gamesLeft = remaining.filter(g => g.playerData[playerKeys[0]].hasPred || true).length;
-  
-  // Simple probability based on current performance + remaining games
+  const gamesLeft = remaining.length;
+  const maxPossiblePtsLeft = remaining.reduce((sum, g) => sum + (5 * g.weight), 0);
+
   const maxPossible = {};
   const minPossible = {};
-  
   for (const st of ranking) {
-    maxPossible[st.key] = st.totalPts + gamesLeft * maxPerGame;
-    minPossible[st.key] = st.totalPts; // best case: 0 more
+    maxPossible[st.key] = Math.round(st.totalPts + maxPossiblePtsLeft);
+    minPossible[st.key] = st.totalPts;
   }
 
-  // Monte Carlo simulation (1000 scenarios)
+  // Monte Carlo — distribui pontos ponderados pela fase restante
   const N = 1000;
   const wins = { Leo: 0, 'Déia': 0, Thais: 0, Rafa: 0 };
-  
-  const scoreDistrib = [0, 0, 0, 1, 1, 1, 2, 2, 3, 5]; // weighted random scores
-  
+  const scoreDistrib = [0, 0, 0, 1, 1, 1, 2, 2, 3, 5];
+
   for (let i = 0; i < N; i++) {
     const sim = {};
-    for (const pk of playerKeys) {
-      sim[pk] = playerStats[pk].totalPts;
-      for (let j = 0; j < gamesLeft; j++) {
-        sim[pk] += scoreDistrib[Math.floor(Math.random() * scoreDistrib.length)];
-      }
+    for (const pk of playerKeys) sim[pk] = playerStats[pk].totalPts;
+    for (const g of remaining) {
+      const baseRoll = scoreDistrib[Math.floor(Math.random() * scoreDistrib.length)];
+      const pts = Math.round(baseRoll * g.weight * 10) / 10;
+      for (const pk of playerKeys) sim[pk] += pts;
     }
     const winner = playerKeys.reduce((a, b) => sim[a] > sim[b] ? a : b);
     wins[winner]++;
@@ -2600,7 +2667,8 @@ function renderSimulation() {
         <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.25rem">chance de vitória</div>
         <div class="mc-range" style="margin-top:0.75rem">
           <div>Atual: <strong>${st.totalPts} pts</strong></div>
-          <div>Máx: <strong>${maxPossible[st.key]} pts</strong></div>
+          <div>Máx possível: <strong>${maxPossible[st.key]} pts</strong></div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">(com pesos por fase)</div>
           <div>Jogos restantes: <strong>${gamesLeft}</strong></div>
         </div>
       </div>`;
@@ -2613,12 +2681,15 @@ function renderSimulation() {
 
   const leader = ranking[0];
   for (let i = 1; i < ranking.length; i++) {
-    const diff = leader.totalPts - ranking[i].totalPts;
-    const gamesNeeded = Math.ceil(diff / 5);
+    const diff = Math.round((leader.totalPts - ranking[i].totalPts) * 10) / 10;
+    const nextElimWeight = remaining.length > 0 ? remaining[0].weight : 1;
+    const ptsPerExact = 5 * nextElimWeight;
+    const gamesNeeded = Math.ceil(diff / ptsPerExact);
+    const phaseNote = nextElimWeight > 1 ? ` (cravada na próxima fase = ${ptsPerExact}pts)` : '';
     html += `
       <div style="display:flex;align-items:center;gap:1rem;padding:0.75rem;border-bottom:1px solid var(--border)">
         <span style="color:${playerColors[ranking[i].name]};font-weight:700;min-width:60px">${ranking[i].name}</span>
-        <span style="font-size:0.85rem;color:var(--text-secondary)">precisa de <strong style="color:var(--accent-gold)">${diff} pontos</strong> a mais (min. ${gamesNeeded} placares exatos consecutivos)</span>
+        <span style="font-size:0.85rem;color:var(--text-secondary)">precisa de <strong style="color:var(--accent-gold)">${diff} pontos</strong> a mais (min. ${gamesNeeded} placar(es) exato(s)${phaseNote})</span>
       </div>`;
   }
   html += `</div>`;
@@ -2722,8 +2793,9 @@ function renderAI() {
         <p>A fase recente sorriu para <span class="highlight">⚡ ${bestRecent.name}</span>, 
         que somou <strong>${recentPts[bestRecentKey]} pontos</strong> nos últimos ${recentGames.length} jogos, 
         indicando uma escalada de forma que pode pressionar a liderança. 
-        Com <strong>${remaining.length} jogos restantes</strong>, o bolão está longe do fim — 
-        qualquer virada ainda é matematicamente possível.</p>
+        Com <strong>${remaining.length} jogos restantes</strong> — incluindo fases com multiplicadores de até ×5 —
+        o bolão está longe do fim. Uma cravada na Final vale <strong style="color:var(--accent-gold)">25 pontos</strong>, 
+        o equivalente a 5 acertos exatos na fase de grupos. Qualquer virada ainda é matematicamente possível.</p>
       </div>
     </div>
 
