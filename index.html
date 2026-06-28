@@ -1143,14 +1143,29 @@ function processGames() {
       dataStr = d.toLocaleDateString('pt-BR');
     }
 
-    // parseNumField: null para vazio/""/undefined; Number para qualquer valor numérico (0, decimais)
     const parseNumField = v => {
-      if (v === null || v === undefined || v === '' || (typeof v === 'string' && v.trim() === '')) return null;
+      // 1. Ignora valores vazios
+      if (v === null || v === undefined || v === '') return null;
       
-      // Substitui a vírgula por ponto para o JavaScript entender os decimais (ex: "1,4" -> "1.4")
-      const valorCorrigido = typeof v === 'string' ? v.replace(',', '.') : v;
+      // 2. Força o valor a virar texto (string) para não termos surpresas com tipos
+      let texto = String(v).trim();
       
-      const n = Number(valorCorrigido);
+      if (texto === '') return null;
+      
+      // 3. Se por acaso tiver ponto de milhar e vírgula decimal (ex: 1.000,40), tira o ponto
+      if (texto.includes('.') && texto.includes(',')) {
+        texto = texto.replace(/\./g, '');
+      }
+      
+      // 4. Troca a vírgula por ponto (1,4 -> 1.4)
+      texto = texto.replace(',', '.');
+      
+      // 5. Converte finalmente para número
+      const n = Number(texto);
+      
+      // DEBUG: Isso vai registrar no log o que o código está lendo e o que está cuspindo
+      console.log(`Original: "${v}" | Texto tratado: "${texto}" | Número final: ${n}`);
+      
       return isNaN(n) ? null : n;
     };
 
@@ -2906,7 +2921,7 @@ window.generatePalpitesTableHtml = function(dateStr) {
 
 </script>
 <footer style="text-align:center;padding:1.25rem;margin-top:2rem;border-top:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;">
-  🏆 Bolão Copa do Mundo 2026 &nbsp;·&nbsp; <strong style="color:var(--text-secondary)">v1.5</strong> &nbsp;·&nbsp; Atualizada em <strong style="color:var(--text-secondary)">28/06/2026 18:11</strong>
+  🏆 Bolão Copa do Mundo 2026 &nbsp;·&nbsp; <strong style="color:var(--text-secondary)">v1.5</strong> &nbsp;·&nbsp; Atualizada em <strong style="color:var(--text-secondary)">28/06/2026 18:18</strong>
 </footer>
 
 </body>
