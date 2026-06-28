@@ -101,6 +101,135 @@ body {
   font-size: 1rem;
 }
 
+/* ---- UPLOAD SCREEN ---- */
+#uploadScreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(34,197,94,0.12) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.08) 0%, transparent 50%),
+              var(--bg-primary);
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+}
+
+.upload-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-card);
+}
+
+.upload-close:hover {
+  background: var(--accent-red);
+  color: #fff;
+  border-color: var(--accent-red);
+  transform: scale(1.1);
+}
+
+.upload-hero {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.upload-hero .trophy {
+  font-size: 6rem;
+  display: block;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 30px rgba(245,197,24,0.6));
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.upload-hero h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 0.75rem;
+}
+
+.upload-hero p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.upload-zone {
+  border: 2px dashed rgba(245,197,24,0.4);
+  border-radius: 20px;
+  padding: 3rem 4rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: rgba(245,197,24,0.03);
+  max-width: 480px;
+  width: 100%;
+}
+
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--accent-gold);
+  background: rgba(245,197,24,0.08);
+  box-shadow: 0 0 40px rgba(245,197,24,0.2);
+  transform: scale(1.02);
+}
+
+.upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+.upload-zone h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+.upload-zone p { color: var(--text-secondary); font-size: 0.9rem; }
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.875rem 2rem;
+  background: var(--gradient-gold);
+  border: none;
+  border-radius: 50px;
+  color: #000;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(245,197,24,0.4);
+}
+
+.upload-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(245,197,24,0.6);
+}
+
+#fileInput { display: none; }
+
 /* ---- DASHBOARD LAYOUT ---- */
 #dashboard { display: none; }
 
@@ -835,6 +964,24 @@ tbody td {
   <p>Conectando com a planilha oficial do Bolão</p>
 </div>
 
+<div id="uploadScreen" style="display:none">
+  <button class="upload-close" onclick="hideUpload()">✕</button>
+  <div class="upload-hero">
+    <span class="trophy">🏆</span>
+    <h1>Bolão Copa do Mundo 2026</h1>
+    <p>Dashboard analítico completo para acompanhar seu bolão. Carregue o arquivo Excel manualmente.</p>
+  </div>
+
+  <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📊</div>
+    <h3>Arraste o arquivo Excel aqui</h3>
+    <p>Ou clique para selecionar</p>
+    <button class="upload-btn" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+      📁 Selecionar Arquivo Excel
+    </button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+  </div>
+</div>
 
 <div id="dashboard">
   <nav class="topnav">
@@ -850,6 +997,7 @@ tbody td {
       <button class="nav-tab" onclick="showSection('games')">⚽ Jogos</button>
       <button class="nav-tab" onclick="showSection('simulation')">🎲 Simulação</button>
       <button class="nav-tab" onclick="showSection('ai')">🤖 IA Analítica</button>
+      <button class="nav-tab" onclick="showUpload()">📤 Upload</button>
     </div>
     <div class="nav-actions">
       <button class="hamburger-btn" onclick="toggleMobileMenu()">☰</button>
@@ -870,6 +1018,7 @@ tbody td {
       <button class="mobile-nav-tab" onclick="showSection('games'); toggleMobileMenu()">⚽ Jogos</button>
       <button class="mobile-nav-tab" onclick="showSection('simulation'); toggleMobileMenu()">🎲 Simulação</button>
       <button class="mobile-nav-tab" onclick="showSection('ai'); toggleMobileMenu()">🤖 IA Analítica</button>
+      <button class="mobile-nav-tab" onclick="showUpload(); toggleMobileMenu()">📤 Upload</button>
     </div>
   </div>
 
@@ -987,6 +1136,64 @@ async function loadGoogleSheet() {
     }
 }
 
+// ---- UPLOAD VISIBILITY ----
+function showUpload() {
+    document.getElementById('uploadScreen').style.display = 'flex';
+}
+
+function hideUpload() {
+    document.getElementById('uploadScreen').style.display = 'none';
+}
+
+// ---- MANUAL UPLOAD HANDLING ----
+const dropZone = document.getElementById('dropZone');
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, { type: 'array', cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    rawData = XLSX.utils.sheet_to_json(ws, { defval: null });
+    
+    // Normalize column names
+    rawData = rawData.map(row => {
+      const normalized = {};
+      for (const [k, v] of Object.entries(row)) {
+        const key = k.trim()
+          .replace('Pontuação Léo', 'pts_Leo')
+          .replace('Pontuação Déia', 'pts_Déia')
+          .replace('Pontuação Thais', 'pts_Thais')
+          .replace('Pontuação Rafa', 'pts_Rafa');
+        normalized[key] = v;
+      }
+      return normalized;
+    });
+
+    document.getElementById('loadingScreen').style.display = 'none';
+    hideUpload();
+    initDashboard();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 // ---- PESOS POR FASE ----
 // Grupos: ×1  → Cravada = 5pts
 // 16-avos: ×1.4 → Cravada = 7pts
@@ -1057,6 +1264,7 @@ function initDashboard() {
   processGames();
   computeStats();
   
+  document.getElementById('uploadScreen').style.display = 'none';
   document.getElementById('dashboard').style.display = 'block';
   
   renderOverview();
@@ -1091,12 +1299,13 @@ function processGames() {
       dataStr = d.toLocaleDateString('pt-BR');
     }
 
-    // parseNum local: null para vazio/não-numérico, número caso contrário
+    // parseNumField: null para vazio/não-numérico, número (incluindo 0 e decimais) caso contrário
     const parseNumField = v => {
       if (v === null || v === undefined || v === '' || (typeof v === 'string' && v.trim() === '')) return null;
       const n = Number(v);
       return isNaN(n) ? null : n;
     };
+
     const realA = parseNumField(row['Real A']);
     const realB = parseNumField(row['Real B']);
     const played = realA !== null && realB !== null;
@@ -1104,8 +1313,7 @@ function processGames() {
     // Player predictions & scores
     const playerData = {};
     for (const pk of playerKeys) {
-      // parseNum retorna null se o valor for vazio/nulo/não-numérico,
-      // e o número caso contrário — inclui 0 como palpite válido.
+      // parseNum igual ao parseNumField, mas para palpites
       const parseNum = v => {
         if (v === null || v === undefined || v === '' || (typeof v === 'string' && v.trim() === '')) return null;
         const n = Number(v);
@@ -1115,7 +1323,7 @@ function processGames() {
       const pb = parseNum(row[`${pk} B`]);
       const hasPred = pa !== null && pb !== null;
       
-      // Pontuação: usa o valor armazenado na planilha como fonte da verdade.
+      // Usa o stored da planilha como fonte da verdade (evita divergência e bug de decimal).
       // Só recalcula se o stored for nulo/vazio (jogo ainda sem pontuação lançada).
       let score = null;
       if (played && hasPred) {
@@ -1178,7 +1386,8 @@ function computeStats() {
     const gamePts = {};
     for (const pk of playerKeys) {
       const pd = game.playerData[pk];
-      const pts = pd.score !== null ? pd.score : 0;
+      // Number() garante que valores vindos como string ("1.4") não causem concatenação
+      const pts = pd.score !== null ? Number(pd.score) : 0;
       gamePts[pk] = pts;
       
       const st = playerStats[pk];
@@ -1368,10 +1577,26 @@ function renderOverview() {
   const mmName = monthNames[today.getMonth()];
   const todayPlanilhaStr = `${dd}-${mmName}`; // Gera formato "16-jun"
   
-  // Se ainda não houver filtro, procura a data de hoje. Se hoje não tiver jogo, pega a primeira data da planilha.
+  // Se ainda não houver filtro, procura a data de hoje.
+  // Se hoje não tiver jogo, pega a próxima data futura mais próxima;
+  // se não houver futuro, pega a última data passada.
   if (!window.currentFilterDate) {
     const todayMatch = uniqueDates.find(d => d.toLowerCase().includes(todayPlanilhaStr));
-    window.currentFilterDate = todayMatch || uniqueDates[0] || '';
+    if (todayMatch) {
+      window.currentFilterDate = todayMatch;
+    } else {
+      // Converte todas as datas da planilha para Date e acha a mais próxima de hoje
+      const todayTs = today.getTime();
+      let closest = null;
+      let closestDiff = Infinity;
+      for (const d of uniqueDates) {
+        const parsed = parseGameDate(d);
+        if (!parsed) continue;
+        const diff = Math.abs(parsed.getTime() - todayTs);
+        if (diff < closestDiff) { closestDiff = diff; closest = d; }
+      }
+      window.currentFilterDate = closest || uniqueDates[0] || '';
+    }
   }
 
   // 3. Cria as opções do menu dropdown (Seletor)
@@ -2843,19 +3068,10 @@ window.generatePalpitesTableHtml = function(dateStr) {
 };
 
 </script>
-
-<footer style="
-  text-align: center;
-  padding: 1.25rem;
-  margin-top: 2rem;
-  border-top: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  letter-spacing: 0.03em;
-">
+<footer style="text-align:center;padding:1.25rem;margin-top:2rem;border-top:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;letter-spacing:0.03em;">
   🏆 Bolão Copa do Mundo 2026 &nbsp;·&nbsp;
-  <strong style="color: var(--text-secondary)">v1.4</strong>
-  &nbsp;·&nbsp; Atualizada em <strong style="color: var(--text-secondary)">28/06/2026</strong>
+  <strong style="color:var(--text-secondary)">v1.5</strong>
+  &nbsp;·&nbsp; Atualizada em <strong style="color:var(--text-secondary)">28/06/2026</strong>
 </footer>
 
 </body>
