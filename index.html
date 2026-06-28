@@ -1207,6 +1207,7 @@ const PHASE_WEIGHTS = {
   '3ª Rodada':              1,
   '16-avos':                1.4,
   '16-avos de Final':       1.4,
+  '16 avos de Final':       1.4,
   'Oitavas':                2,
   'Oitavas de Final':       2,
   'Quartas':                3,
@@ -1299,16 +1300,29 @@ function processGames() {
       dataStr = d.toLocaleDateString('pt-BR');
     }
 
-    const realA = row['Real A'] !== null ? Number(row['Real A']) : null;
-    const realB = row['Real B'] !== null ? Number(row['Real B']) : null;
-    const played = realA !== null && realB !== null && !isNaN(realA) && !isNaN(realB);
+    // parseNum local: null para vazio/não-numérico, número caso contrário
+    const parseNumField = v => {
+      if (v === null || v === undefined || v === '' || (typeof v === 'string' && v.trim() === '')) return null;
+      const n = Number(v);
+      return isNaN(n) ? null : n;
+    };
+    const realA = parseNumField(row['Real A']);
+    const realB = parseNumField(row['Real B']);
+    const played = realA !== null && realB !== null;
 
     // Player predictions & scores
     const playerData = {};
     for (const pk of playerKeys) {
-      const pa = row[`${pk} A`] !== null ? Number(row[`${pk} A`]) : null;
-      const pb = row[`${pk} B`] !== null ? Number(row[`${pk} B`]) : null;
-      const hasPred = pa !== null && pb !== null && !isNaN(pa) && !isNaN(pb);
+      // parseNum retorna null se o valor for vazio/nulo/não-numérico,
+      // e o número caso contrário — inclui 0 como palpite válido.
+      const parseNum = v => {
+        if (v === null || v === undefined || v === '' || (typeof v === 'string' && v.trim() === '')) return null;
+        const n = Number(v);
+        return isNaN(n) ? null : n;
+      };
+      const pa = parseNum(row[`${pk} A`]);
+      const pb = parseNum(row[`${pk} B`]);
+      const hasPred = pa !== null && pb !== null;
       
       // Calcula sempre com peso por fase (ignora valor armazenado pois pode ser sem peso)
       let score = null;
