@@ -959,7 +959,15 @@ async function loadGoogleSheet() {
         // O XLSX.read consegue ler CSV se configurado corretamente
         const wb = XLSX.read(csvText, { type: 'string' });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        rawData = XLSX.utils.sheet_to_json(ws, { defval: null });
+
+        // ATENÇÃO: o SheetJS tenta "adivinhar" números no CSV usando heurística en-US
+        // (ponto = decimal, vírgula = separador de milhar). Como a planilha do Google
+        // Sheets está em pt-BR, um valor como "1,4" é mal interpretado e convertido
+        // para 14. A opção { raw: false } abaixo instrui o sheet_to_json a usar o
+        // TEXTO FORMATADO ORIGINAL da célula (cell.w) em vez do valor já (mal)
+        // convertido (cell.v). Assim "1,4" / "1.4" chegam como string fiel à planilha,
+        // e quem decide o que fazer com vírgula/ponto é a função parseNumField().
+        rawData = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false });
         
 	// Normalize column names
 	rawData = rawData.map(row => {
@@ -1162,9 +1170,6 @@ function processGames() {
       
       // 5. Converte finalmente para número
       const n = Number(texto);
-      
-      // DEBUG: Isso vai registrar no log o que o código está lendo e o que está cuspindo
-      console.log(`Original: "${v}" | Texto tratado: "${texto}" | Número final: ${n}`);
       
       return isNaN(n) ? null : n;
     };
@@ -2921,7 +2926,7 @@ window.generatePalpitesTableHtml = function(dateStr) {
 
 </script>
 <footer style="text-align:center;padding:1.25rem;margin-top:2rem;border-top:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;">
-  🏆 Bolão Copa do Mundo 2026 &nbsp;·&nbsp; <strong style="color:var(--text-secondary)">v1.5</strong> &nbsp;·&nbsp; Atualizada em <strong style="color:var(--text-secondary)">28/06/2026 18:18</strong>
+  🏆 Bolão Copa do Mundo 2026 &nbsp;·&nbsp; <strong style="color:var(--text-secondary)">v1.5</strong> &nbsp;·&nbsp; Atualizada em <strong style="color:var(--text-secondary)">28/06/2026 18:41</strong>
 </footer>
 
 </body>
