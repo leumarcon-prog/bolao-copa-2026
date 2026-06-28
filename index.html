@@ -101,6 +101,7 @@ body {
   font-size: 1rem;
 }
 
+
 /* ---- DASHBOARD LAYOUT ---- */
 #dashboard { display: none; }
 
@@ -835,6 +836,7 @@ tbody td {
   <p>Conectando com a planilha oficial do Bolão</p>
 </div>
 
+
 <div id="dashboard">
   <nav class="topnav">
     <div class="nav-brand">
@@ -952,33 +954,38 @@ async function loadGoogleSheet() {
     try {
         const response = await fetch(GOOGLE_SHEET_URL);
         if (!response.ok) throw new Error('Falha no download da planilha');
+        
         const csvText = await response.text();
+        // O XLSX.read consegue ler CSV se configurado corretamente
         const wb = XLSX.read(csvText, { type: 'string' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         rawData = XLSX.utils.sheet_to_json(ws, { defval: null });
-        rawData = normalizeColumns(rawData);
+        
+	// Normalize column names
+	rawData = rawData.map(row => {
+    	const normalized = {};
+    	for (const [k, v] of Object.entries(row)) {
+        
+        // --- COLE O CÓDIGO AQUI ---
+        let key = k.trim();
+        if (key === "Pontuação Léo") key = "pts_Leo";
+        if (key === "Pontuação Déia") key = "pts_Déia";
+        if (key === "Pontuação Thais") key = "pts_Thais";
+        if (key === "Pontuação Rafa") key = "pts_Rafa";
+        // --------------------------
+        
+        normalized[key] = v;
+    }
+    return normalized;
+});
+
         document.getElementById('loadingScreen').style.display = 'none';
         initDashboard();
     } catch (error) {
         console.error("Erro ao carregar planilha do Google:", error);
         document.getElementById('loadingScreen').style.display = 'none';
-        initDashboard();
+        initDashboard(); // Abre o painel mesmo se falhar
     }
-}
-
-function normalizeColumns(data) {
-    return data.map(row => {
-        const n = {};
-        for (const [k, v] of Object.entries(row)) {
-            let key = k.trim();
-            if (key === "Pontuação Léo")   key = "pts_Leo";
-            if (key === "Pontuação Déia")  key = "pts_Déia";
-            if (key === "Pontuação Thais") key = "pts_Thais";
-            if (key === "Pontuação Rafa")  key = "pts_Rafa";
-            n[key] = v;
-        }
-        return n;
-    });
 }
 
 // ---- PESOS POR FASE ----
@@ -1009,6 +1016,59 @@ function getPhaseWeight(rodada) {
   if (!rodada) return 1;
   const key = String(rodada).trim();
   return PHASE_WEIGHTS[key] ?? 1;
+}
+
+// ---- DATE HELPERS ----
+const MONTH_PT = { jan:0, fev:1, mar:2, abr:3, mai:4, jun:5, jul:6, ago:7, set:8, out:9, nov:10, dez:11 };
+const MONTH_PT_SHORT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const WORLD_CUP_YEAR = 2026;
+
+function parseGameDate(dataStr) {
+  if (!dataStr) return null;
+  const s = String(dataStr).trim().toLowerCase();
+  // "11-jun." / "11-jun"
+  let m = s.match(/^(\d{1,2})[\s\-\/]([a-z]{3,})\.?$/);
+  if (m) {
+    const day = parseInt(m[1], 10);
+    const monKey = m[2].slice(0, 3);
+    if (MONTH_PT.hasOwnProperty(monKey)) return new Date(WORLD_CUP_YEAR, MONTH_PT[monKey], day);
+  }
+  // "11/06" ou "11/06/2026"
+  m = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (m) {
+    const day = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10) - 1;
+    let y = WORLD_CUP_YEAR;
+    if (m[3]) y = m[3].length === 2 ? 2000 + parseInt(m[3], 10) : parseInt(m[3], 10);
+    return new Date(y, month, day);
+  }
+  // ISO "2026-06-11"
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+  const d = new Date(dataStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function isSameDay(d1, d2) {
+  return !!d1 && !!d2 &&
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth()    === d2.getMonth()    &&
+    d1.getDate()     === d2.getDate();
+}
+
+function formatDateLabel(d, fallback) {
+  if (d) return `${String(d.getDate()).padStart(2,'0')}/${MONTH_PT_SHORT[d.getMonth()]}`;
+  return fallback || '';
+}
+
+function getTopGroup(ranking, getValue, higherIsBetter = true) {
+  let best = higherIsBetter ? -Infinity : Infinity;
+  for (const s of ranking) {
+    const v = getValue(s);
+    if (higherIsBetter ? v > best : v < best) best = v;
+  }
+  const players = ranking.filter(s => getValue(s) === best);
+  return { value: best, players, names: players.map(s => s.name).join(', ') };
 }
 
 // ---- SCORING FUNCTION (com peso por fase) ----
@@ -1084,7 +1144,7 @@ function processGames() {
       dataStr = d.toLocaleDateString('pt-BR');
     }
 
-    // parseNumField: null para vazio/""/undefined, número para qualquer valor numérico (incluindo 0 e decimais)
+    // parseNumField: null para vazio/""/undefined; número para qualquer valor numérico (incluindo 0 e decimais)
     const parseNumField = v => {
       if (v === null || v === undefined || v === '' || (typeof v === 'string' && v.trim() === '')) return null;
       const n = Number(v);
@@ -1102,8 +1162,8 @@ function processGames() {
       const pb = parseNumField(row[`${pk} B`]);
       const hasPred = pa !== null && pb !== null;
 
-      // Usa o stored da planilha como fonte da verdade.
-      // Só recalcula se o stored for nulo/vazio (jogo ainda sem pontuação lançada).
+      // Usa o stored da planilha como fonte da verdade (evita recalcular e divergir).
+      // Só recalcula se o stored for nulo/vazio (jogo sem pontuação lançada ainda).
       let score = null;
       if (played && hasPred) {
         const storedKey = pk === 'Leo' ? 'pts_Leo' : `pts_${pk}`;
@@ -1165,7 +1225,7 @@ function computeStats() {
     const gamePts = {};
     for (const pk of playerKeys) {
       const pd = game.playerData[pk];
-      // Number() garante que valores vindos como string ("1.4") não causem concatenação
+      // Number() garante que "1.4" (string do CSV) não cause concatenação ao somar
       const pts = pd.score !== null ? Number(pd.score) : 0;
       gamePts[pk] = pts;
       
@@ -1362,7 +1422,6 @@ function renderOverview() {
     if (todayMatch) {
       window.currentFilterDate = todayMatch;
     } else {
-      // Acha a data mais próxima de hoje (futura ou passada)
       const todayTs = today.getTime();
       let closest = null, closestDiff = Infinity;
       for (const d of uniqueDates) {
@@ -2846,8 +2905,8 @@ window.generatePalpitesTableHtml = function(dateStr) {
 </script>
 <footer style="text-align:center;padding:1.25rem;margin-top:2rem;border-top:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;letter-spacing:0.03em;">
   🏆 Bolão Copa do Mundo 2026 &nbsp;·&nbsp;
-  <strong style="color:var(--text-secondary)">v1.6</strong>
-  &nbsp;·&nbsp; Atualizada em <strong style="color:var(--text-secondary)">28/06/2026 17:49</strong>
+  <strong style="color:var(--text-secondary)">v1.7</strong>
+  &nbsp;·&nbsp; Atualizada em <strong style="color:var(--text-secondary)">28/06/2026 17:54</strong>
 </footer>
 
 </body>
