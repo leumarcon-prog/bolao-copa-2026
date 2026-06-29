@@ -1308,6 +1308,8 @@ function computeStats() {
   // Derived
   for (const pk of playerKeys) {
     const st = playerStats[pk];
+    // Corrige erros de ponto flutuante (ex: 163.39999999999) travando em 1 decimal
+    st.totalPts = Math.round(st.totalPts * 10) / 10;
     st.avgScore = st.gamesPlayed > 0 ? (st.totalPts / st.gamesPlayed) : 0;
     st.hitRate = st.gamesPlayed > 0 ? (st.correctWinner / st.gamesPlayed * 100) : 0;
     st.exactRate = st.gamesPlayed > 0 ? (st.exact / st.gamesPlayed * 100) : 0;
@@ -1421,7 +1423,7 @@ function renderOverview() {
         <div class="medal">${medals[i]}</div>
         <div class="p-label" style="white-space: nowrap;">${label}</div>
         <div class="p-name" style="color:${playerColors[st.name] || '#fff'}">${st.name}</div>
-        <div class="p-pts">${st.totalPts}</div>
+        <div class="p-pts">${st.totalPts.toFixed(1)}</div>
         <div class="p-sub">${pct}% dos pontos totais</div>
       </div>`;
   }
@@ -1850,7 +1852,7 @@ function renderEvolution() {
              runningTotal[pk] += (g.playerData[pk].score || 0);
           });
        });
-       playerKeys.forEach(pk => dateCumulative[pk].push(runningTotal[pk]));
+       playerKeys.forEach(pk => dateCumulative[pk].push(Math.round(runningTotal[pk] * 10) / 10));
     });
 
     createChart('dateEvolutionChart', {
@@ -2941,7 +2943,7 @@ window.generatePalpitesTableHtml = function(dateStr) {
 
 </script>
 <footer style="text-align:center;padding:1.25rem;margin-top:2rem;border-top:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;">
-  🏆 Bolão Copa do Mundo 2026 &nbsp;·&nbsp; <strong style="color:var(--text-secondary)">v1.6</strong> &nbsp;·&nbsp; Atualizada em <strong style="color:var(--text-secondary)">29/06/2026 14:55</strong>
+  🏆 Bolão Copa do Mundo 2026 &nbsp;·&nbsp; <strong style="color:var(--text-secondary)">v1.7</strong> &nbsp;·&nbsp; Atualizada em <strong style="color:var(--text-secondary)">29/06/2026 16:23</strong>
 </footer>
 
 </body>
