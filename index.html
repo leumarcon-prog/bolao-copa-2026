@@ -1433,29 +1433,44 @@ function renderOverview() {
   
   // 2. Descobre a data de hoje para tentar pré-selecionar
   const today = new Date();
+  
+  // FIX: Zera as horas para meia-noite. Assim, 15h de hoje não fica mais próximo de amanhã.
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  
   const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
   const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const mmName = monthNames[today.getMonth()];
-  const todayPlanilhaStr = `${dd}-${mmName}`; // Gera formato "16-jun"
+  
+  // FIX: Cobre as variações mais comuns que o Sheets pode retornar (29-jun, 29/06, 29-jun.)
+  const possibleTodayStrings = [`${dd}-${mmName}`, `${dd}/${mm}`, `${dd}-${mmName}.`];
   
   // Se ainda não houver filtro, procura a data de hoje. Se hoje não tiver jogo, pega a primeira data da planilha.
   if (!window.currentFilterDate) {
-    const todayMatch = uniqueDates.find(d => d.toLowerCase().includes(todayPlanilhaStr));
+    const todayMatch = uniqueDates.find(d => {
+      const dLow = d.toLowerCase();
+      return possibleTodayStrings.some(format => dLow.includes(format));
+    });
+
     if (todayMatch) {
       window.currentFilterDate = todayMatch;
     } else {
-      const todayTs = today.getTime();
       let closest = null, closestDiff = Infinity;
       for (const d of uniqueDates) {
         const parsed = parseGameDate(d);
         if (!parsed) continue;
-        const diff = Math.abs(parsed.getTime() - todayTs);
-        if (diff < closestDiff) { closestDiff = diff; closest = d; }
+        
+        // Compara a data da planilha com o "hoje" cravado na meia-noite
+        const diff = Math.abs(parsed.getTime() - todayMidnight);
+        
+        if (diff < closestDiff) { 
+          closestDiff = diff; 
+          closest = d; 
+        }
       }
       window.currentFilterDate = closest || uniqueDates[0] || '';
     }
   }
-
   // 3. Cria as opções do menu dropdown (Seletor)
   const optionsHtml = uniqueDates.map(d => {
     let label = d;
